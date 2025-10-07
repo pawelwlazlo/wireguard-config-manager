@@ -18,6 +18,6 @@
         "Read(./.env.*)",
         "Read(./secrets/**)"
       ],
-      "g": ["../docs/"]
+      "additionalDirectories": ["../docs/"]
     }
   }
