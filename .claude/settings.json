@@ -1,0 +1,23 @@
+{
+    "permissions": {
+      "defaultMode": "acceptEdits",
+      "allow": [
+        "Edit(src/**)",
+        "Edit(tests/**)",
+        "Write(src/**)",
+        "Bash(pnpm run test:*)",
+        "Bash(pnpm run lint)",
+        "Bash(git commit:*)",
+        "WebFetch(domain:github.com)"
+      ],
+      "ask": [
+        "Bash(git push:*)"
+      ],
+      "deny": [
+        "Read(./.env)",
+        "Read(./.env.*)",
+        "Read(./secrets/**)"
+      ],
+      "g": ["../docs/"]
+    }
+  }
