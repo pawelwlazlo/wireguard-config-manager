@@ -3,6 +3,7 @@
 Manual distribution of WireGuard configurations to users in the company. Additionally, the need to keep records of issued configurations.
 
 ### Minimum Feature Set
+
 - The application should read WireGuard configurations from a specified directory
 - Users should be able to download WireGuard configurations
 - Users should be able to register and log in to the system
@@ -12,6 +13,7 @@ Manual distribution of WireGuard configurations to users in the company. Additio
 - Administrator should be able to display the list of users
 
 ### What is NOT included in MVP scope
+
 - Automatic generation of WireGuard configurations for new users, the system only distributes previously created configurations
 - Management of hostnames for peers
 - Full user management (creating, editing, deleting accounts)
