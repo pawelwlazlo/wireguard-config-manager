@@ -19,4 +19,3 @@
 
 - GitHub Actions for creating CI/CD pipelines.
 - Custom VPS hosting of the application via a Docker image.
-
