@@ -15,7 +15,7 @@ import { getPeerById, updatePeerFriendlyName, revokePeer } from "@/lib/services/
 
 export const prerender = false;
 
-const IdParamSchema = z.string().uuid();
+const IdParamSchema = z.uuid();
 
 export const GET: APIRoute = async ({ params, locals }) => {
   try {
