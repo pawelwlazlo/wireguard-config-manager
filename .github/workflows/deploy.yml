@@ -108,8 +108,9 @@ jobs:
             # Stop and remove old containers
             docker compose down || true
             
-            # Build and start new containers
-            docker compose up --build -d
+            # Build and start new containers (with no cache to ensure fresh build)
+            docker compose build --no-cache
+            docker compose up -d
             
             # Clean up old Docker images
             docker image prune -f
