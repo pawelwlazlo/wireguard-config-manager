@@ -2,7 +2,7 @@
  * API client wrapper with retry logic and JSON parsing
  */
 
-import type { UserDto, PeerDto, Page, UpdatePeerCommand } from "@/types";
+import type { UserDto, PeerDto, Page, UpdatePeerCommand, PeerRowVM, AssignPeerCommand, PeerStatus } from "@/types";
 
 interface ApiError {
   error: string;
@@ -85,6 +85,40 @@ class ApiClient {
 
   downloadPeer(id: string): void {
     window.location.href = `${this.baseUrl}/peers/${id}/download`;
+  }
+
+  // Admin endpoints
+  async getAdminPeers(filters?: {
+    status?: PeerStatus;
+    owner?: string;
+    page?: number;
+    size?: number;
+  }): Promise<Page<PeerRowVM>> {
+    const params = new URLSearchParams();
+    if (filters?.status) params.set("status", filters.status);
+    if (filters?.owner) params.set("owner", filters.owner);
+    if (filters?.page) params.set("page", filters.page.toString());
+    if (filters?.size) params.set("size", filters.size.toString());
+
+    return this.fetchWithRetry<Page<PeerRowVM>>(
+      `${this.baseUrl}/admin/peers?${params.toString()}`
+    );
+  }
+
+  async assignPeer(peerId: string, command: AssignPeerCommand): Promise<PeerDto> {
+    return this.fetchWithRetry<PeerDto>(
+      `${this.baseUrl}/admin/peers/${peerId}/assign`,
+      {
+        method: "POST",
+        body: JSON.stringify(command),
+      }
+    );
+  }
+
+  async revokeAdminPeer(peerId: string): Promise<void> {
+    await fetch(`${this.baseUrl}/admin/peers/${peerId}`, {
+      method: "DELETE",
+    });
   }
 }
 

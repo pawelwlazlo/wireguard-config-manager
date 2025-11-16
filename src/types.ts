@@ -119,3 +119,36 @@ export interface ChangePasswordCommand {
 export type AuditEvent = Enums<{ schema: "app" }, "audit_event_enum">;
 export type PeerStatus = Enums<{ schema: "app" }, "peer_status_enum">;
 export type UserStatus = Enums<{ schema: "app" }, "user_status_enum">;
+
+/* -------------------------------------------------------------------------- */
+/*                             Admin View Models                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Filters for admin peers list
+ */
+export interface PeerFiltersState {
+  status?: PeerStatus;
+  owner?: string; // UUID
+}
+
+/**
+ * Extended peer DTO with owner email for admin view
+ */
+export interface PeerRowVM extends PeerDto {
+  owner_email?: string | null;
+  owner_id?: string | null;
+}
+
+/**
+ * Complete state for admin peers view
+ */
+export interface AdminPeersVM {
+  peers: PeerRowVM[];
+  page: number;
+  size: number;
+  total: number;
+  filters: PeerFiltersState;
+  loading: boolean;
+  error?: string;
+}
