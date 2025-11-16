@@ -105,8 +105,21 @@ jobs:
               echo "No .env backup found, skipping restore"
             fi
             
+            # DEBUG: Show where we are and what's here
+            echo "=== DEBUG: Current location and files ==="
+            echo "Current directory: $(pwd)"
+            echo "DEPLOY_PATH: $DEPLOY_PATH"
+            echo "Files in DEPLOY_PATH:"
+            ls -la "$DEPLOY_PATH" | head -20
+            echo "Checking for .env:"
+            test -f "$DEPLOY_PATH/.env" && echo ".env EXISTS" || echo ".env NOT FOUND"
+            echo "Checking for docker-compose.yml:"
+            test -f "$DEPLOY_PATH/docker-compose.yml" && echo "docker-compose.yml EXISTS" || echo "docker-compose.yml NOT FOUND"
+            echo "========================================"
+            
             # Stop and remove old containers
             cd "$DEPLOY_PATH"
+            echo "After cd, current directory: $(pwd)"
             docker compose down || true
             
             # Build and start new containers with --no-cache to ensure fresh build
