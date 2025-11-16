@@ -6,6 +6,7 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { getPeerConfig } from "@/lib/services/peerService";
+import { getSupabaseAdminClient } from "@/db/supabase.client";
 
 export const prerender = false;
 
@@ -13,6 +14,14 @@ const IdParamSchema = z.uuid();
 
 export const GET: APIRoute = async ({ params, locals }) => {
   try {
+    // Check if user is authenticated
+    if (!locals.user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", message: "Authentication required" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     // Validate path parameter
     const parseResult = IdParamSchema.safeParse(params.id);
     if (!parseResult.success) {
@@ -27,8 +36,13 @@ export const GET: APIRoute = async ({ params, locals }) => {
 
     const peerId = parseResult.data;
 
-    // Get peer config (RLS will handle access control)
-    const peerConfig = await getPeerConfig(locals.supabase, peerId);
+    // Use admin client for admins to avoid RLS recursion, regular client for users
+    const client = locals.user.roles.includes('admin') 
+      ? getSupabaseAdminClient() 
+      : locals.supabase;
+
+    // Get peer config
+    const peerConfig = await getPeerConfig(client, peerId);
 
     // TODO: Decrypt config_ciphertext
     // For now, we'll assume config_ciphertext is base64 encoded

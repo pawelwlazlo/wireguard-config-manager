@@ -12,6 +12,7 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { getPeerById, updatePeerFriendlyName, revokePeer } from "@/lib/services/peerService";
+import { getSupabaseAdminClient } from "@/db/supabase.client";
 
 export const prerender = false;
 
@@ -19,6 +20,14 @@ const IdParamSchema = z.uuid();
 
 export const GET: APIRoute = async ({ params, locals }) => {
   try {
+    // Check if user is authenticated
+    if (!locals.user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", message: "Authentication required" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     // Validate path parameter
     const parseResult = IdParamSchema.safeParse(params.id);
     if (!parseResult.success) {
@@ -33,8 +42,13 @@ export const GET: APIRoute = async ({ params, locals }) => {
 
     const peerId = parseResult.data;
 
-    // Fetch peer (RLS will handle access control)
-    const peer = await getPeerById(locals.supabase, peerId);
+    // Use admin client for admins to avoid RLS recursion, regular client for users
+    const client = locals.user.roles.includes('admin') 
+      ? getSupabaseAdminClient() 
+      : locals.supabase;
+
+    // Fetch peer
+    const peer = await getPeerById(client, peerId);
 
     if (!peer) {
       return new Response(
@@ -76,6 +90,14 @@ const UpdatePeerSchema = z.object({
 
 export const PATCH: APIRoute = async ({ params, request, locals }) => {
   try {
+    // Check if user is authenticated
+    if (!locals.user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", message: "Authentication required" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     // Validate path parameter
     const parseResult = IdParamSchema.safeParse(params.id);
     if (!parseResult.success) {
@@ -118,9 +140,14 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
 
     const { friendly_name } = bodyParseResult.data;
 
-    // Update peer (RLS will handle access control)
+    // Use admin client for admins to avoid RLS recursion, regular client for users
+    const client = locals.user.roles.includes('admin') 
+      ? getSupabaseAdminClient() 
+      : locals.supabase;
+
+    // Update peer
     const peer = await updatePeerFriendlyName(
-      locals.supabase,
+      client,
       peerId,
       friendly_name
     );
@@ -169,6 +196,14 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
 
 export const DELETE: APIRoute = async ({ params, locals }) => {
   try {
+    // Check if user is authenticated
+    if (!locals.user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", message: "Authentication required" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     // Validate path parameter
     const parseResult = IdParamSchema.safeParse(params.id);
     if (!parseResult.success) {
@@ -183,8 +218,13 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
 
     const peerId = parseResult.data;
 
-    // Revoke peer (RLS will handle access control)
-    await revokePeer(locals.supabase, peerId);
+    // Use admin client for admins to avoid RLS recursion, regular client for users
+    const client = locals.user.roles.includes('admin') 
+      ? getSupabaseAdminClient() 
+      : locals.supabase;
+
+    // Revoke peer
+    await revokePeer(client, peerId);
 
     // Return 204 No Content
     return new Response(null, { status: 204 });

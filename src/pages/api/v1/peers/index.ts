@@ -7,6 +7,7 @@ import type { APIRoute } from "astro";
 import { z } from "zod";
 import { getPeersForOwner } from "@/lib/services/peerService";
 import type { Page, PeerDto } from "@/types";
+import { getSupabaseAdminClient } from "@/db/supabase.client";
 
 export const prerender = false;
 
@@ -18,9 +19,13 @@ const QuerySchema = z.object({
 
 export const GET: APIRoute = async ({ url, locals }) => {
   try {
-    // TODO: For now, we'll use a mock user ID until auth is implemented
-    // This should be replaced with: const userId = locals.user?.id
-    const mockUserId = "00000000-0000-0000-0000-000000000000";
+    // Check if user is authenticated
+    if (!locals.user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", message: "Authentication required" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
     // Parse query parameters
     const queryParams = Object.fromEntries(url.searchParams.entries());
@@ -39,8 +44,13 @@ export const GET: APIRoute = async ({ url, locals }) => {
 
     const { status, page, size } = parseResult.data;
 
+    // Use admin client for admins to avoid RLS recursion, regular client for users
+    const client = locals.user.roles.includes('admin') 
+      ? getSupabaseAdminClient() 
+      : locals.supabase;
+
     // Fetch peers for user
-    const result = await getPeersForOwner(locals.supabase, mockUserId, {
+    const result = await getPeersForOwner(client, locals.user.id, {
       status,
       page,
       size,
