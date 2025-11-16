@@ -1,0 +1,19 @@
+---
+/**
+ * Register page
+ * Displays registration form for new users
+ */
+
+import Layout from "@/layouts/Layout.astro";
+import { RegisterForm } from "@/components/RegisterForm";
+
+// Prevent prerendering for this page
+export const prerender = false;
+---
+
+<Layout title="Rejestracja - WireGuard Config Manager">
+  <main class="flex min-h-screen items-center justify-center p-4">
+    <RegisterForm client:load />
+  </main>
+</Layout>
+

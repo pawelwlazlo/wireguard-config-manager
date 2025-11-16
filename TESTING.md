@@ -424,6 +424,94 @@ npx supabase db reset
 # Re-register users and run tests again
 ```
 
+## E2E Testing with Playwright
+
+### Running E2E Tests
+
+The project includes comprehensive end-to-end tests for the frontend views using Playwright.
+
+**Available commands:**
+
+```bash
+# Run all E2E tests (headless)
+npm run test:e2e
+
+# Run tests in interactive UI mode
+npm run test:e2e:ui
+
+# Run tests in debug mode
+npm run test:e2e:debug
+
+# Show test report
+npm run test:e2e:report
+```
+
+### Test Coverage
+
+#### Login View (`tests/e2e/login.spec.ts`)
+- ✅ Form validation (email, password)
+- ✅ Error handling (invalid credentials, too many attempts, server errors)
+- ✅ Successful login flow
+- ✅ Loading states
+- ✅ Accessibility (ARIA attributes)
+- ✅ Mobile responsiveness
+
+#### Register View (`tests/e2e/register.spec.ts`)
+- ✅ Form display with all elements (email, password, confirm password, checklist)
+- ✅ Email validation (format and domain restriction)
+- ✅ Dynamic password strength checklist
+- ✅ Password confirmation matching
+- ✅ Loading states during submission
+- ✅ Error handling:
+  - Invalid email domain (`InvalidDomain`)
+  - Existing email (`EmailExists`)
+  - Weak password (`WeakPassword`)
+  - Validation errors (`ValidationError`)
+  - Server errors (`AuthError`)
+  - Network failures
+- ✅ Successful registration with redirect
+- ✅ Navigation between login/register pages
+- ✅ Accessibility (ARIA attributes, roles, labels)
+- ✅ Mobile responsiveness (375px, 768px viewports)
+- ✅ Server error clearing on resubmission
+
+### Test Configuration
+
+Tests are configured in `playwright.config.ts` to run on:
+- **Browsers:** Chromium, Firefox, WebKit
+- **Mobile devices:** Pixel 5, iPhone 12
+- **Base URL:** `http://localhost:4321` (configurable via `BASE_URL` env var)
+
+### Writing New E2E Tests
+
+When adding new views, follow the existing test structure:
+
+1. Create test file in `tests/e2e/{view-name}.spec.ts`
+2. Use descriptive test names
+3. Test all user interactions
+4. Mock API responses for consistent testing
+5. Verify accessibility attributes
+6. Test mobile viewports
+7. Handle loading and error states
+
+Example test structure:
+
+```typescript
+import { test, expect } from '@playwright/test';
+
+test.describe('View Name', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/route');
+  });
+
+  test('should display expected elements', async ({ page }) => {
+    // Test implementation
+  });
+  
+  // More tests...
+});
+```
+
 ## Next Steps
 
 - [ ] Implement audit log viewer
@@ -431,4 +519,5 @@ npx supabase db reset
 - [ ] Test password reset flow
 - [ ] Test user deactivation cascade
 - [ ] Load testing with multiple concurrent users
+- [ ] Add E2E tests for admin dashboard views
 
