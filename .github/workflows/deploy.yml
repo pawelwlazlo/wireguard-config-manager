@@ -83,10 +83,11 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           envs: SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,ENCRYPTION_KEY,IMPORT_DIR
-          script_stop: true
+          script_stop: false
           script: |
             #!/bin/bash
-            set -e
+            set -x  # Show all commands
+            # Removed set -e to see all errors instead of stopping at first one
             
             echo "=== DEBUG: Environment variables ==="
             echo "SUPABASE_URL: ${SUPABASE_URL:0:20}..."
