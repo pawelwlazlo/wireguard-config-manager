@@ -1,11 +1,6 @@
 services:
   wireguard-manager:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        SUPABASE_URL: ${SUPABASE_URL}
-        SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+    image: ghcr.io/pawelwlazlo/wireguard-config-manager:latest
     container_name: wireguard-config-manager
     ports:
       - "4321:4321"
