@@ -111,19 +111,33 @@ jobs:
               echo "Fixed .dockerignore by removing pnpm-lock.yaml"
             fi
             
-            # Stop and remove old containers
-            docker compose down || true
+            # Install Node.js if not present
+            which node || curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y nodejs
             
-            # Build and start new containers (with no cache to ensure fresh build)
-            docker compose build --no-cache
-            docker compose up -d
+            # Install pnpm
+            which pnpm || npm install -g pnpm
             
-            # Clean up old Docker images
-            docker image prune -f
+            # Install dependencies
+            pnpm install --frozen-lockfile
             
-            # Show container status
-            docker compose ps
+            # Build application
+            pnpm run build
             
-            echo "Deployment completed successfully!"
-            echo "Application is running on port 4321"
+            # Stop old process if running
+            pkill -f "node.*dist/server/entry.mjs" || true
+            
+            # Start application in background
+            nohup node dist/server/entry.mjs > app.log 2>&1 &
+            
+            # Wait a bit and check if it's running
+            sleep 2
+            if pgrep -f "node.*dist/server/entry.mjs" > /dev/null; then
+              echo "Deployment completed successfully!"
+              echo "Application is running on port 4321"
+              echo "View logs: tail -f $DEPLOY_PATH/app.log"
+            else
+              echo "ERROR: Application failed to start"
+              tail -n 50 "$DEPLOY_PATH/app.log"
+              exit 1
+            fi
 
