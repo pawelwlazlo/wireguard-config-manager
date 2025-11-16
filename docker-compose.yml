@@ -18,6 +18,9 @@ services:
       - NODE_ENV=production
       - HOST=0.0.0.0
       - PORT=4321
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+
+networks:
+  default:
+    name: supabase_network_wireguard-config-manager
+    external: true
 
