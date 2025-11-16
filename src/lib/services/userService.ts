@@ -14,7 +14,7 @@ type RoleRow = Tables<{ schema: "app" }, "roles">;
  * Map database row to UserDto with roles
  */
 function mapToUserDto(
-  row: Pick<UserRow, "id" | "email" | "status" | "peer_limit" | "created_at">,
+  row: Pick<UserRow, "id" | "email" | "status" | "peer_limit" | "created_at" | "requires_password_change">,
   roles: RoleName[]
 ): UserDto {
   return {
@@ -23,6 +23,7 @@ function mapToUserDto(
     status: row.status,
     peer_limit: row.peer_limit,
     created_at: row.created_at,
+    requires_password_change: row.requires_password_change,
     roles,
   };
 }
@@ -39,7 +40,7 @@ export async function getProfile(
   const { data: user, error: userError } = await supabase
     .schema("app")
     .from("users")
-    .select("id, email, status, peer_limit, created_at")
+    .select("id, email, status, peer_limit, created_at, requires_password_change")
     .eq("id", userId)
     .single();
 
@@ -93,7 +94,7 @@ export async function listUsers(
   let query = supabase
     .schema("app")
     .from("users")
-    .select("id, email, status, peer_limit, created_at", { count: "exact" });
+    .select("id, email, status, peer_limit, created_at, requires_password_change", { count: "exact" });
 
   // Apply filters
   if (options.status) {
@@ -177,7 +178,7 @@ export async function updateUser(
   const { data: currentUser, error: fetchError } = await supabase
     .schema("app")
     .from("users")
-    .select("id, email, status, peer_limit, created_at")
+    .select("id, email, status, peer_limit, created_at, requires_password_change")
     .eq("id", userId)
     .single();
 
@@ -222,7 +223,7 @@ export async function updateUser(
     .from("users")
     .update(updates)
     .eq("id", userId)
-    .select("id, email, status, peer_limit, created_at")
+    .select("id, email, status, peer_limit, created_at, requires_password_change")
     .single();
 
   if (updateError || !updatedUser) {
@@ -320,6 +321,18 @@ export async function resetUserPassword(
     token: temporaryPassword, // In production, this should be hashed
     expires_at: expiresAt.toISOString(),
   });
+
+  // Set requires_password_change flag to force user to change password on next login
+  const { error: updateFlagError } = await supabase
+    .schema("app")
+    .from("users")
+    .update({ requires_password_change: true })
+    .eq("id", userId);
+
+  if (updateFlagError) {
+    console.error("Error setting requires_password_change flag:", updateFlagError);
+    // Don't fail the entire operation if this update fails
+  }
 
   return temporaryPassword;
 }

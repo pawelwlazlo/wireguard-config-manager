@@ -50,7 +50,7 @@ export async function validateEmailDomain(
  * Map database row to UserDto with roles
  */
 function mapToUserDto(
-  row: Pick<UserRow, "id" | "email" | "status" | "peer_limit" | "created_at">,
+  row: Pick<UserRow, "id" | "email" | "status" | "peer_limit" | "created_at" | "requires_password_change">,
   roles: RoleName[]
 ): UserDto {
   return {
@@ -59,6 +59,7 @@ function mapToUserDto(
     status: row.status,
     peer_limit: row.peer_limit,
     created_at: row.created_at,
+    requires_password_change: row.requires_password_change,
     roles,
   };
 }
@@ -75,7 +76,7 @@ async function getUserProfile(
   const { data: user, error: userError } = await supabase
     .schema("app")
     .from("users")
-    .select("id, email, status, peer_limit, created_at")
+    .select("id, email, status, peer_limit, created_at, requires_password_change")
     .eq("id", userId)
     .single();
 
@@ -107,7 +108,7 @@ async function getUserProfile(
  */
 async function logAuditEvent(
   supabase: SupabaseClient,
-  eventType: "LOGIN",
+  eventType: "LOGIN" | "PASSWORD_CHANGE",
   actorId: string,
   metadata?: Record<string, unknown>
 ): Promise<void> {
@@ -311,5 +312,103 @@ export async function logoutUser(
 
   // Log audit event
   await logAuditEvent(supabase, "LOGIN", userId, { action: "logout" });
+}
+
+/**
+ * Change user password
+ * Requires the current password for verification
+ * Returns a new JWT token after successful password change
+ * 
+ * @throws "INCORRECT_CURRENT_PASSWORD" if current password is wrong
+ * @throws "WEAK_PASSWORD" if new password doesn't meet requirements
+ * @throws "AuthError" for other authentication errors
+ */
+export async function changePassword(
+  supabase: SupabaseClient,
+  userId: string,
+  currentPassword: string,
+  newPassword: string
+): Promise<string> {
+  // First, verify the current password by attempting to sign in
+  // Get user email from database
+  const adminClient = getSupabaseAdminClient();
+  const { data: userData, error: userError } = await adminClient
+    .schema("app")
+    .from("users")
+    .select("email")
+    .eq("id", userId)
+    .single();
+
+  if (userError || !userData) {
+    console.error("Error fetching user data:", userError);
+    throw new Error("AuthError");
+  }
+
+  // Verify current password by attempting to sign in
+  const { error: verifyError } = await supabase.auth.signInWithPassword({
+    email: userData.email,
+    password: currentPassword,
+  });
+
+  if (verifyError) {
+    // Current password is incorrect
+    if (
+      verifyError.message.includes("Invalid login credentials") ||
+      verifyError.message.includes("Email not confirmed")
+    ) {
+      throw new Error("INCORRECT_CURRENT_PASSWORD");
+    }
+    console.error("Error verifying current password:", verifyError);
+    throw new Error("AuthError");
+  }
+
+  // Validate new password strength
+  // Must be at least 12 characters with uppercase, lowercase, digit, and special character
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{12,}$/;
+  if (!passwordRegex.test(newPassword)) {
+    throw new Error("WEAK_PASSWORD");
+  }
+
+  // Update password using Supabase Auth
+  const { data: updateData, error: updateError } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+
+  if (updateError) {
+    if (updateError.message.includes("password")) {
+      throw new Error("WEAK_PASSWORD");
+    }
+    console.error("Error updating password:", updateError);
+    throw new Error("AuthError");
+  }
+
+  if (!updateData.user) {
+    throw new Error("AuthError");
+  }
+
+  // Get new session/JWT token
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  
+  if (sessionError || !sessionData.session) {
+    console.error("Error getting new session:", sessionError);
+    throw new Error("AuthError");
+  }
+
+  // Reset requires_password_change flag (use admin client to bypass RLS)
+  const { error: updateFlagError } = await adminClient
+    .schema("app")
+    .from("users")
+    .update({ requires_password_change: false })
+    .eq("id", userId);
+
+  if (updateFlagError) {
+    console.error("Error resetting password change flag:", updateFlagError);
+    // Don't fail the entire operation if this update fails
+  }
+
+  // Log audit event
+  await logAuditEvent(supabase, "PASSWORD_CHANGE", userId, { action: "password_change" });
+
+  return sessionData.session.access_token;
 }
 

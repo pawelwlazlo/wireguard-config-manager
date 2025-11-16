@@ -31,7 +31,7 @@ export type RoleName = Tables<{ schema: "app" }, "roles">["name"];
 /* -------------------------------------------------------------------------- */
 
 export interface UserDto
-  extends Pick<UserRow, "id" | "email" | "status" | "peer_limit" | "created_at"> {
+  extends Pick<UserRow, "id" | "email" | "status" | "peer_limit" | "created_at" | "requires_password_change"> {
   /**
    * Roles mapped through user_roles join. Example: ["user"], ["admin"].
    */
@@ -102,6 +102,11 @@ export interface UpdatePeerCommand {
 
 export interface AssignPeerCommand {
   user_id: string;
+}
+
+export interface ChangePasswordCommand {
+  current_password: string;
+  new_password: string;
 }
 
 // No body expected for FIFO claim, logout, revoke, etc. Therefore not modelled here.

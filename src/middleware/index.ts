@@ -30,6 +30,35 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
         if (userProfile) {
           context.locals.user = userProfile;
+
+          // Check if user needs to change password (for page requests only, not API)
+          const url = new URL(context.request.url);
+          const isPageRequest = !url.pathname.startsWith("/api/");
+          const isChangePasswordPage = url.pathname === "/change-password";
+          const isLoginPage = url.pathname === "/login";
+          const isRegisterPage = url.pathname === "/register";
+
+          // Redirect to change-password page if required
+          // Skip redirect if:
+          // - Already on change-password page (avoid redirect loop)
+          // - On login/register page
+          // - API endpoint (let API handle auth)
+          if (
+            userProfile.requires_password_change &&
+            isPageRequest &&
+            !isChangePasswordPage &&
+            !isLoginPage &&
+            !isRegisterPage
+          ) {
+            return context.redirect("/change-password");
+          }
+
+          // Don't allow access to change-password page if flag is not set
+          // (unless there's a specific reason to allow it - commented out for now)
+          // This allows users to voluntarily change their password
+          // if (isChangePasswordPage && !userProfile.requires_password_change) {
+          //   return context.redirect("/");
+          // }
         }
       }
     } catch (error) {
