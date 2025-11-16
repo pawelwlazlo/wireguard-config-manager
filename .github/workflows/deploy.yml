@@ -32,7 +32,7 @@ jobs:
       
       - name: Create deployment archive
         run: |
-          # Exclude files that shouldn't be deployed
+          # Create archive in /tmp to avoid "file changed as we read it" error
           tar --exclude='.git' \
               --exclude='node_modules' \
               --exclude='dist' \
@@ -41,8 +41,10 @@ jobs:
               --exclude='playwright-report' \
               --exclude='test-results' \
               --exclude='.env*' \
-              --exclude='deployment.tar.gz' \
-              -czf deployment.tar.gz .
+              -czf /tmp/deployment.tar.gz .
+          
+          # Move archive to workspace for SCP
+          mv /tmp/deployment.tar.gz ./deployment.tar.gz
       
       - name: Copy files to VPS
         uses: appleboy/scp-action@v0.1.7
