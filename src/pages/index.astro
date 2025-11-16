@@ -1,8 +1,20 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { Button } from '@/components/ui/button';
+import { Dashboard } from '@/components/Dashboard';
+
+// Redirect to login if not authenticated
+if (!Astro.locals.user) {
+	return Astro.redirect('/login');
+}
+
+// Redirect to change password if required
+if (Astro.locals.user.requires_password_change) {
+	return Astro.redirect('/change-password');
+}
+
+export const prerender = false;
 ---
 
-<Layout>
-	<Button variant="outline">Click me</Button>
+<Layout title="Dashboard - WireGuard Config Manager">
+	<Dashboard client:load />
 </Layout>
