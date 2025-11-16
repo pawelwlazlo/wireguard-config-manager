@@ -215,7 +215,59 @@ Summary:
 
 ---
 
-### 3. User Peer Operations Test (`test-user-peers.sh`)
+### 3. Change Password Test (`test-change-password.sh`)
+
+**Purpose:** Test password change functionality with verification.
+
+**What it tests:**
+- ✅ User authentication
+- ✅ Current password verification
+- ✅ Password change with new JWT generation
+- ✅ Old password invalidation
+- ✅ New password validation
+- ✅ JWT refresh after password change
+
+**Usage:**
+```bash
+# With default credentials
+./test-change-password.sh
+
+# With custom email and passwords
+./test-change-password.sh user@example.com OldPass@123 NewPass@456
+```
+
+**Prerequisites:**
+- User registered with known password
+
+**Expected Output:**
+```
+Step 1: Logging in...
+✓ Login successful
+
+Step 2: Changing password...
+✓ Password changed successfully
+✓ New JWT token received
+
+Step 3: Testing login with old password (should fail)...
+✓ Login with old password correctly rejected
+
+Step 4: Testing login with new password (should succeed)...
+✓ Login with new password successful
+
+Step 5: Verifying new JWT with /me endpoint...
+✓ User profile retrieved successfully
+
+✅ All password change tests passed!
+```
+
+**Notes:**
+- Returns a new JWT token after successful password change
+- Old JWT tokens remain valid until expiration
+- Password must meet security requirements (12+ chars, uppercase, lowercase, digit, special char)
+
+---
+
+### 4. User Peer Operations Test (`test-user-peers.sh`)
 
 **Purpose:** Test full peer lifecycle from regular user perspective.
 
@@ -475,6 +527,25 @@ npm run test:e2e:report
 - ✅ Mobile responsiveness (375px, 768px viewports)
 - ✅ Server error clearing on resubmission
 
+#### Change Password View (`tests/e2e/change-password.spec.ts`)
+- ✅ Form display with all elements (current password, new password, confirm password, checklist)
+- ✅ Password visibility toggle (show/hide)
+- ✅ Dynamic password strength checklist (12+ characters)
+- ✅ Password fields validation (current, new, confirm)
+- ✅ Password mismatch detection
+- ✅ Submit button state management
+- ✅ Loading states during submission
+- ✅ Error handling:
+  - Incorrect current password (`INCORRECT_CURRENT_PASSWORD`)
+  - Weak password (`WEAK_PASSWORD`)
+  - Authentication errors (`AuthError`)
+  - Session expiration (redirect to login)
+- ✅ Successful password change with redirect
+- ✅ JWT update in localStorage after success
+- ✅ Accessibility (ARIA attributes, roles, labels)
+- ✅ Mobile responsiveness (375px viewport)
+- ✅ Forced password change redirect (when `requires_password_change` flag is set)
+
 ### Test Configuration
 
 Tests are configured in `playwright.config.ts` to run on:
@@ -512,12 +583,73 @@ test.describe('View Name', () => {
 });
 ```
 
+## Password Change Flow
+
+### Regular User Password Change
+
+Users can voluntarily change their password at any time:
+
+1. Navigate to `/change-password`
+2. Enter current password
+3. Enter new password (must meet requirements: 12+ chars, uppercase, lowercase, digit, special char)
+4. Confirm new password
+5. Submit form
+6. Receive new JWT token
+7. Redirect to home page
+
+### Forced Password Change (Admin Reset)
+
+When admin resets a user's password:
+
+1. Admin uses `/api/v1/admin/users/{id}/reset-password`
+2. System sets `requires_password_change = true` flag on user
+3. User logs in with temporary password
+4. Middleware redirects user to `/change-password`
+5. User must change password before accessing other pages
+6. After successful change, `requires_password_change` flag is reset to `false`
+7. User can now access all pages normally
+
+### Testing Forced Password Change
+
+```bash
+# 1. Login as admin
+ADMIN_JWT=$(curl -s -X POST http://localhost:4321/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"AdminPass@123"}' | jq -r '.jwt')
+
+# 2. Reset user password
+TEMP_PASSWORD=$(curl -s -X POST http://localhost:4321/api/v1/admin/users/{user-id}/reset-password \
+  -H "Authorization: Bearer $ADMIN_JWT" | jq -r '.temporary_password')
+
+# 3. Login as user with temporary password
+USER_JWT=$(curl -s -X POST http://localhost:4321/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"user@example.com\",\"password\":\"$TEMP_PASSWORD\"}" | jq -r '.jwt')
+
+# 4. User profile should have requires_password_change = true
+curl -s -X GET http://localhost:4321/api/v1/users/me \
+  -H "Authorization: Bearer $USER_JWT" | jq '.requires_password_change'
+# Output: true
+
+# 5. Change password
+NEW_JWT=$(curl -s -X POST http://localhost:4321/api/v1/users/me/change-password \
+  -H "Authorization: Bearer $USER_JWT" \
+  -H "Content-Type: application/json" \
+  -d "{\"current_password\":\"$TEMP_PASSWORD\",\"new_password\":\"NewSecure@Pass123\"}" | jq -r '.jwt')
+
+# 6. Verify flag is reset
+curl -s -X GET http://localhost:4321/api/v1/users/me \
+  -H "Authorization: Bearer $NEW_JWT" | jq '.requires_password_change'
+# Output: false
+```
+
 ## Next Steps
 
 - [ ] Implement audit log viewer
 - [ ] Add rate limiting tests
-- [ ] Test password reset flow
 - [ ] Test user deactivation cascade
 - [ ] Load testing with multiple concurrent users
 - [ ] Add E2E tests for admin dashboard views
+- [x] Test password change flow
+- [x] Test forced password change after admin reset
 

@@ -5,6 +5,8 @@
 
 interface PasswordChecklistProps {
   password: string;
+  /** Minimum password length (default: 8 for registration, 12 for password change) */
+  minLength?: number;
 }
 
 interface CriterionItemProps {
@@ -60,9 +62,9 @@ function CriterionItem({ met, label }: CriterionItemProps) {
   );
 }
 
-export function PasswordChecklist({ password }: PasswordChecklistProps) {
+export function PasswordChecklist({ password, minLength = 8 }: PasswordChecklistProps) {
   const criteria = {
-    length: password.length >= 8,
+    length: password.length >= minLength,
     upper: /[A-Z]/.test(password),
     lower: /[a-z]/.test(password),
     number: /\d/.test(password),
@@ -82,7 +84,7 @@ export function PasswordChecklist({ password }: PasswordChecklistProps) {
       <ul className="space-y-2" aria-label="Lista kryteriów hasła">
         <CriterionItem
           met={criteria.length}
-          label="Co najmniej 8 znaków"
+          label={`Co najmniej ${minLength} znaków`}
         />
         <CriterionItem
           met={criteria.upper}

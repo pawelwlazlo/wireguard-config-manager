@@ -212,7 +212,7 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
           autoComplete="new-password"
         />
 
-        <PasswordChecklist password={newPassword} />
+        <PasswordChecklist password={newPassword} minLength={12} />
 
         <Button type="submit" className="w-full" disabled={loading || !isValid}>
           {loading ? (
