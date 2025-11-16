@@ -171,7 +171,7 @@ The application can be deployed to a VPS using Docker and GitHub Actions for aut
    ```env
    # Supabase Configuration (required for both build and runtime)
    # If using local Supabase (supabase start), use internal Docker network name:
-   PUBLIC_SUPABASE_URL=http://supabase_kong_ubuntu:8000
+   PUBLIC_SUPABASE_URL=http://supabase_kong_wireguard-config-manager:8000
    # If using Supabase Cloud, use public URL:
    # PUBLIC_SUPABASE_URL=https://your-project.supabase.co
    
@@ -187,9 +187,10 @@ The application can be deployed to a VPS using Docker and GitHub Actions for aut
    
    **Important Notes**:
    - The `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_ANON_KEY` variables are required during Docker build process for pre-rendering static pages.
-   - If using **local Supabase** (`supabase start`), use the internal Docker container name (e.g., `http://supabase_kong_ubuntu:8000`). Check your Kong container name with `docker ps | grep kong`.
+   - If using **local Supabase** (`supabase start`), use the internal Docker container name (e.g., `http://supabase_kong_wireguard-config-manager:8000`). Check your Kong container name with `docker ps | grep kong`.
    - If using **Supabase Cloud**, use the public HTTPS URL provided by Supabase.
-   - The application connects to Supabase through the `supabase_network_ubuntu` Docker network (configured in `docker-compose.yml`).
+   - The application connects to Supabase through the `supabase_network_wireguard-config-manager` Docker network (configured in `docker-compose.yml`).
+   - During deployment, the workflow automatically copies `env/.env` to `.env` in the root directory so Docker Compose can load the variables for build arguments.
 
 ### GitHub Configuration
 

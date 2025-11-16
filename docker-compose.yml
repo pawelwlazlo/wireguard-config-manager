@@ -22,6 +22,6 @@ services:
       - supabase_network_wireguard-config-manager
 
 networks:
-  supabase_network_ubuntu:
+  supabase_network_wireguard-config-manager:
     external: true
 
