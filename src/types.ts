@@ -36,6 +36,10 @@ export interface UserDto
    * Roles mapped through user_roles join. Example: ["user"], ["admin"].
    */
   roles: RoleName[];
+  /**
+   * Count of peers owned by user (only included in admin list endpoint)
+   */
+  peers_count?: number;
 }
 
 export type PeerDto = Pick<
@@ -149,6 +153,47 @@ export interface AdminPeersVM {
   size: number;
   total: number;
   filters: PeerFiltersState;
+  loading: boolean;
+  error?: string;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                        Admin Users View Models                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Extended user DTO with computed fields for admin view
+ */
+export interface UserVM {
+  id: string;
+  email: string;
+  domain: string; // extracted from email
+  roles: RoleName[];
+  status: UserStatus;
+  peerLimit: number;
+  peersCount: number;
+  createdAt: string; // ISO
+}
+
+/**
+ * Filters for admin users list
+ */
+export interface UserFilter {
+  status?: UserStatus;
+  domain?: string;
+  role?: RoleName;
+}
+
+/**
+ * Complete state for admin users view
+ */
+export interface AdminUsersVM {
+  users: UserVM[];
+  page: number;
+  size: number;
+  total: number;
+  sort: string; // e.g. "email:asc"
+  filters: UserFilter;
   loading: boolean;
   error?: string;
 }

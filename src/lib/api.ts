@@ -2,7 +2,17 @@
  * API client wrapper with retry logic and JSON parsing
  */
 
-import type { UserDto, PeerDto, Page, UpdatePeerCommand, PeerRowVM, AssignPeerCommand, PeerStatus } from "@/types";
+import type { 
+  UserDto, 
+  PeerDto, 
+  Page, 
+  UpdatePeerCommand, 
+  PeerRowVM, 
+  AssignPeerCommand, 
+  PeerStatus,
+  UpdateUserCommand,
+  ResetPasswordResponse
+} from "@/types";
 
 interface ApiError {
   error: string;
@@ -119,6 +129,47 @@ class ApiClient {
     await fetch(`${this.baseUrl}/admin/peers/${peerId}`, {
       method: "DELETE",
     });
+  }
+
+  // Admin users endpoints
+  async getAdminUsers(filters?: {
+    status?: string;
+    domain?: string;
+    role?: string;
+    page?: number;
+    size?: number;
+    sort?: string;
+  }): Promise<Page<UserDto>> {
+    const params = new URLSearchParams();
+    if (filters?.status) params.set("status", filters.status);
+    if (filters?.domain) params.set("domain", filters.domain);
+    if (filters?.role) params.set("role", filters.role);
+    if (filters?.page) params.set("page", filters.page.toString());
+    if (filters?.size) params.set("size", filters.size.toString());
+    if (filters?.sort) params.set("sort", filters.sort);
+
+    return this.fetchWithRetry<Page<UserDto>>(
+      `${this.baseUrl}/admin/users?${params.toString()}`
+    );
+  }
+
+  async updateAdminUser(userId: string, command: UpdateUserCommand): Promise<UserDto> {
+    return this.fetchWithRetry<UserDto>(
+      `${this.baseUrl}/admin/users/${userId}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(command),
+      }
+    );
+  }
+
+  async resetUserPassword(userId: string): Promise<ResetPasswordResponse> {
+    return this.fetchWithRetry<ResetPasswordResponse>(
+      `${this.baseUrl}/admin/users/${userId}/reset-password`,
+      {
+        method: "POST",
+      }
+    );
   }
 }
 

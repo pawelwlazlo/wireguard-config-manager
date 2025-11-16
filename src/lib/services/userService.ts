@@ -69,13 +69,14 @@ export async function getProfile(
 
 /**
  * Get paginated list of users (admin only)
- * Supports filtering by status and domain
+ * Supports filtering by status, domain, and role
  */
 export async function listUsers(
   supabase: SupabaseClient,
   options: {
     status?: UserStatus;
     domain?: string;
+    role?: RoleName;
     page?: number;
     size?: number;
     sort?: string;
@@ -147,15 +148,48 @@ export async function listUsers(
     rolesMap.get(userId)!.push(roleName);
   });
 
-  // Map users to DTOs
-  const items = users.map((user) => {
+  // Filter by role if specified
+  let filteredUsers = users;
+  if (options.role) {
+    filteredUsers = users.filter((user) => {
+      const userRoles = rolesMap.get(user.id) || [];
+      return userRoles.includes(options.role as RoleName);
+    });
+  }
+
+  // Get peers count for all users in batch
+  const { data: peersCounts, error: peersError } = await supabase
+    .schema("app")
+    .from("peers")
+    .select("owner_id")
+    .in("owner_id", userIds);
+
+  if (peersError) {
+    throw new Error("DatabaseError");
+  }
+
+  // Build a map of user_id -> peers_count
+  const peersCountMap = new Map<string, number>();
+  (peersCounts || []).forEach((peer) => {
+    const ownerId = peer.owner_id;
+    if (ownerId) {
+      peersCountMap.set(ownerId, (peersCountMap.get(ownerId) || 0) + 1);
+    }
+  });
+
+  // Map users to DTOs with peers_count
+  const items = filteredUsers.map((user) => {
     const roles = rolesMap.get(user.id) || [];
-    return mapToUserDto(user, roles);
+    const dto = mapToUserDto(user, roles);
+    return {
+      ...dto,
+      peers_count: peersCountMap.get(user.id) || 0,
+    };
   });
 
   return {
     items,
-    total: count || 0,
+    total: options.role ? items.length : (count || 0),
     page,
     size,
   };
