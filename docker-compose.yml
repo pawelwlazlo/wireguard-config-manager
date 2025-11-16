@@ -18,10 +18,4 @@ services:
       - NODE_ENV=production
       - HOST=0.0.0.0
       - PORT=4321
-    networks:
-      - supabase_network_wireguard-config-manager
-
-networks:
-  supabase_network_wireguard-config-manager:
-    external: true
 
