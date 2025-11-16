@@ -71,9 +71,21 @@ Tests are organized by feature/view:
 
 ```
 tests/
-└── e2e/
-    ├── login.spec.ts       # Login page tests
-    └── [future tests]      # Additional test files
+├── e2e/                         # End-to-end tests
+│   ├── login.spec.ts           # Login page tests
+│   ├── register.spec.ts        # Registration tests
+│   ├── dashboard.spec.ts       # User dashboard tests
+│   ├── change-password.spec.ts # Password change tests
+│   ├── not-found.spec.ts       # 404 page tests
+│   └── admin-config.spec.ts    # Admin config view tests
+└── unit/                        # Unit tests (Vitest)
+    ├── hooks/
+    │   ├── useDashboard.test.ts      # Dashboard hook tests
+    │   └── useAdminConfig.test.ts    # Admin config hook tests
+    └── components/
+        ├── ClaimPeerButton.test.tsx  # Button component tests
+        ├── EmptyState.test.tsx       # Empty state component tests
+        └── StatsCard.test.tsx        # Stats card component tests
 ```
 
 ## Writing Tests

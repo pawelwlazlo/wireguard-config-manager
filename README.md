@@ -114,6 +114,9 @@ All commands should be run from the root of the project:
 | `npm run astro` | Run Astro CLI commands (e.g., `npm run astro add`, `npm run astro check`) |
 | `npm run lint` | Run ESLint to check code quality |
 | `npm run lint:fix` | Run ESLint and automatically fix issues |
+| `npm test` | Run unit tests with Vitest |
+| `npm run test:ui` | Run unit tests in interactive UI mode |
+| `npm run test:coverage` | Run unit tests with coverage report |
 | `npm run test:e2e` | Run all E2E tests with Playwright |
 | `npm run test:e2e:ui` | Run E2E tests in interactive UI mode |
 | `npm run test:e2e:debug` | Run E2E tests in debug mode |
@@ -125,9 +128,18 @@ All commands should be run from the root of the project:
 
 | Route | Description |
 |-------|-------------|
-| `/` | Home page |
+| `/` | Home page (dashboard for authenticated users) |
 | `/login` | User login page with email and password authentication |
 | `/register` | User registration page (domain-restricted) |
+
+### Protected Routes (Admin Only)
+
+| Route | Description |
+|-------|-------------|
+| `/admin/users` | User management interface |
+| `/admin/peers` | Peer configuration management |
+| `/admin/audit` | Audit log viewer with filtering |
+| `/admin/config` | System configuration viewer (read-only) |
 
 ### API Endpoints
 
@@ -157,6 +169,41 @@ All commands should be run from the root of the project:
 - `POST /api/v1/admin/import` - Import WireGuard configs from directory
 - `GET /api/v1/admin/config` - Get system configuration
 - `GET /api/v1/admin/audit` - Get audit log (paginated, filterable)
+
+## Admin Features
+
+### System Configuration Viewer (`/admin/config`)
+
+The Admin Config view provides administrators with a read-only dashboard of the current system configuration, enabling quick visibility into platform settings and health.
+
+**Key Features:**
+- **System Status Indicator**: Visual status bar showing overall system health
+  - 🟢 **OK**: System operational (default if not explicitly set)
+  - 🟡 **Degraded**: System experiencing issues
+  - 🔴 **Down**: System unavailable
+- **Configuration Grid**: Displays all system configuration key-value pairs in an organized, responsive grid
+- **Smart Display**: Long configuration values are automatically truncated with hover tooltips showing full content
+- **Real-time Refresh**: Manual refresh button to fetch latest configuration
+- **Error Handling**: Comprehensive error states with retry mechanisms for network issues
+- **Responsive Design**: Fully responsive layout adapting from mobile to desktop
+
+**Use Cases:**
+- Quick verification of deployment settings (environment, version)
+- Database connection verification
+- WireGuard network settings review
+- System health monitoring
+
+**Implementation Details:**
+- **Frontend**: React component (`AdminConfigPage`) with custom hook (`useAdminConfig`)
+- **Backend**: Read-only endpoint (`GET /api/v1/admin/config`) protected by admin role
+- **State Management**: Local component state with loading, error, and success states
+- **Accessibility**: ARIA labels, semantic HTML, keyboard navigation support
+
+### Other Admin Features
+
+- **User Management** (`/admin/users`): View, edit, and deactivate users; reset passwords; manage peer limits
+- **Peer Management** (`/admin/peers`): View all peer configurations; manually assign peers to users; filter by status and owner
+- **Audit Log** (`/admin/audit`): Comprehensive event tracking with filtering by event type, date range, and full-text search
 
 ## Project Scope
 

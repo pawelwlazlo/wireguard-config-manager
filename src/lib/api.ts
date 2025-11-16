@@ -44,8 +44,13 @@ class ApiClient {
 
         if (response.status === 401) {
           // Redirect to login on unauthorized
-          window.location.href = "/login";
+          window.location.href = "/login?expired=true";
           throw new Error("Unauthorized");
+        }
+
+        if (response.status === 403) {
+          // Forbidden - insufficient permissions
+          throw new Error("You do not have permission to access this resource");
         }
 
         if (!response.ok) {

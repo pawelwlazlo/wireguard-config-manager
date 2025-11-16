@@ -17,24 +17,37 @@ function deriveSystemStatus(config: Record<string, string>): SystemStatus {
     return statusKey;
   }
   
-  // Default to degraded if no explicit status is set
-  return "degraded";
+  // Default to 'ok' if no explicit status is set - if system is responding, it's operational
+  return "ok";
 }
 
 /**
  * Converts ConfigDto (key-value map) to array of ConfigItemVM
+ * Filters out invalid entries and sorts alphabetically
  */
 function mapConfigToItems(config: Record<string, string>): ConfigItemVM[] {
   return Object.entries(config)
-    .filter(([key, value]) => key !== "" && value !== undefined)
-    .map(([key, value]) => ({ key, value }))
+    .filter(([key, value]) => {
+      // Filter out empty keys, undefined/null values, and non-string values
+      return (
+        key &&
+        key.trim() !== "" &&
+        value !== undefined &&
+        value !== null &&
+        typeof value === "string"
+      );
+    })
+    .map(([key, value]) => ({
+      key: key.trim(),
+      value: String(value).trim(),
+    }))
     .sort((a, b) => a.key.localeCompare(b.key));
 }
 
 export function useAdminConfig() {
   const [state, setState] = useState<AdminConfigState>({
     items: [],
-    status: "degraded",
+    status: "ok",
     loading: true,
     error: null,
   });
@@ -45,6 +58,11 @@ export function useAdminConfig() {
 
       const config = await api.getConfig();
       
+      // Validate response - must be an object
+      if (!config || typeof config !== "object") {
+        throw new Error("Invalid configuration response from server");
+      }
+
       // Map to view models
       const items = mapConfigToItems(config);
       const status = deriveSystemStatus(config);
@@ -58,10 +76,26 @@ export function useAdminConfig() {
     } catch (err) {
       console.error("Failed to fetch config:", err);
       
+      // Provide user-friendly error messages
+      let errorMessage = "Failed to load configuration";
+      
+      if (err instanceof Error) {
+        // Check for specific error types
+        if (err.message.includes("permission")) {
+          errorMessage = "Access denied. You do not have permission to view this configuration.";
+        } else if (err.message.includes("network") || err.message.includes("fetch")) {
+          errorMessage = "Network error. Please check your connection and try again.";
+        } else if (err.message.includes("Unauthorized")) {
+          errorMessage = "Your session has expired. Please log in again.";
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
       setState((prev) => ({
         ...prev,
         loading: false,
-        error: err instanceof Error ? err.message : "Failed to load configuration",
+        error: errorMessage,
       }));
     }
   }, []);
