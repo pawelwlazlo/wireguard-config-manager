@@ -1,5 +1,6 @@
 ---
 import Layout from '@/layouts/Layout.astro';
+import { AuditLogPage } from '@/components/admin/AuditLogPage';
 
 // Redirect to login if not authenticated
 if (!Astro.locals.user) {
@@ -20,9 +21,5 @@ export const prerender = false;
 ---
 
 <Layout title="Admin - Audit Log">
-	<div class="container mx-auto px-4 py-8">
-		<h1 class="text-3xl font-bold mb-4">Audit Log</h1>
-		<p class="text-muted-foreground">This feature is coming soon...</p>
-	</div>
+	<AuditLogPage client:load />
 </Layout>
-

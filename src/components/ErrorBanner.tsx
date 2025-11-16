@@ -2,11 +2,14 @@
  * Reusable error banner component for displaying error messages
  */
 
+import type { ReactNode } from "react";
+
 interface ErrorBannerProps {
   message: string;
+  children?: ReactNode;
 }
 
-export function ErrorBanner({ message }: ErrorBannerProps) {
+export function ErrorBanner({ message, children }: ErrorBannerProps) {
   return (
     <div
       role="alert"
@@ -25,7 +28,10 @@ export function ErrorBanner({ message }: ErrorBannerProps) {
             clipRule="evenodd"
           />
         </svg>
-        <p className="text-sm font-medium">{message}</p>
+        <div className="flex-1">
+          <p className="text-sm font-medium">{message}</p>
+          {children}
+        </div>
       </div>
     </div>
   );

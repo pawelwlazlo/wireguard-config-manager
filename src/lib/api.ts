@@ -11,7 +11,9 @@ import type {
   AssignPeerCommand, 
   PeerStatus,
   UpdateUserCommand,
-  ResetPasswordResponse
+  ResetPasswordResponse,
+  AuditDto,
+  AuditEvent
 } from "@/types";
 
 interface ApiError {
@@ -169,6 +171,28 @@ class ApiClient {
       {
         method: "POST",
       }
+    );
+  }
+
+  // Admin audit log endpoints
+  async getAuditLog(filters?: {
+    event_type?: AuditEvent;
+    from?: Date;
+    to?: Date;
+    page?: number;
+    size?: number;
+    sort?: string;
+  }): Promise<Page<AuditDto>> {
+    const params = new URLSearchParams();
+    if (filters?.event_type) params.set("event_type", filters.event_type);
+    if (filters?.from) params.set("from", filters.from.toISOString());
+    if (filters?.to) params.set("to", filters.to.toISOString());
+    if (filters?.page) params.set("page", filters.page.toString());
+    if (filters?.size) params.set("size", filters.size.toString());
+    if (filters?.sort) params.set("sort", filters.sort);
+
+    return this.fetchWithRetry<Page<AuditDto>>(
+      `${this.baseUrl}/admin/audit?${params.toString()}`
     );
   }
 }

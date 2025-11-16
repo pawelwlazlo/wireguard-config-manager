@@ -197,3 +197,45 @@ export interface AdminUsersVM {
   loading: boolean;
   error?: string;
 }
+
+/* -------------------------------------------------------------------------- */
+/*                        Admin Audit Log View Models                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Sort options for audit log table
+ */
+export type AuditSortOption = 
+  | "created_at:asc" 
+  | "created_at:desc" 
+  | "event_type:asc" 
+  | "event_type:desc";
+
+/**
+ * Filters for admin audit log
+ */
+export interface AuditFiltersState {
+  eventType?: AuditEvent;
+  from?: Date;
+  to?: Date;
+}
+
+/**
+ * Complete state for admin audit log page
+ */
+export interface AuditPageState {
+  page: number; // 1-based
+  size: number; // default 20
+  sort: AuditSortOption;
+  filters: AuditFiltersState;
+}
+
+/**
+ * Result of useAuditLog hook
+ */
+export interface UseAuditLogResult {
+  data?: Page<AuditDto>;
+  loading: boolean;
+  error?: string;
+  setState(state: Partial<AuditPageState>): void;
+}
