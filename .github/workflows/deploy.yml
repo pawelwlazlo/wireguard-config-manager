@@ -120,11 +120,8 @@ jobs:
             # Make sure we're in the deployment directory
             cd "$DEPLOY_PATH"
             
-            # Install dependencies
-            pnpm install --frozen-lockfile
-            
-            # Build application (ignore errors - will succeed on VPS with .env)
-            pnpm run build || echo "Build had warnings but continuing with deployment"
+            # Install production dependencies only (skip build - using pre-built dist/)
+            pnpm install --prod --frozen-lockfile || pnpm install --frozen-lockfile
             
             # Stop old process if running
             pkill -f "node.*dist/server/entry.mjs" || true
