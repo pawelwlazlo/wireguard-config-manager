@@ -114,8 +114,8 @@ jobs:
             # Install Node.js if not present
             which node || curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y nodejs
             
-            # Install pnpm
-            which pnpm || npm install -g pnpm
+            # Install pnpm globally using npm with sudo
+            which pnpm || sudo npm install -g pnpm
             
             # Install dependencies
             pnpm install --frozen-lockfile
