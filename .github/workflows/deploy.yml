@@ -76,6 +76,15 @@ jobs:
               rm -rf "$DEPLOY_PATH/backup"
             fi
             
+            # Debug: Show what we're working with
+            echo "=== DEPLOYMENT DEBUG INFO ==="
+            echo "DEPLOY_PATH: $DEPLOY_PATH"
+            echo "Listing deployment directory:"
+            ls -la "$DEPLOY_PATH/" || echo "Directory does not exist"
+            echo "Checking for .env file:"
+            ls -la "$DEPLOY_PATH/.env" || echo ".env file does not exist"
+            echo "============================"
+            
             # Verify .env file exists BEFORE deployment
             if [ ! -f "$DEPLOY_PATH/.env" ]; then
               echo "ERROR: .env file not found in $DEPLOY_PATH"
