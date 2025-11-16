@@ -129,6 +129,8 @@ jobs:
             SUPABASE_URL=${{ secrets.SUPABASE_URL }}
             SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
             SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+            ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
+            IMPORT_DIR=${{ secrets.IMPORT_DIR }}
             NODE_ENV=production
             HOST=0.0.0.0
             PORT=4321
