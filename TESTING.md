@@ -45,7 +45,98 @@ EOF
 
 ## Test Scripts
 
-### 1. Admin Import Test (`test-admin-import.sh`)
+### 0. Admin Setup & Import (`test-admin-setup.sh`) 🆕
+
+**Purpose:** Complete setup of test environment - domain, admin user, and peer import in one command.
+
+**What it does:**
+- ✅ Adds `example.com` to accepted domains
+- ✅ Registers admin user (`admin@example.com`)
+- ✅ Imports WireGuard peers (calls `test-admin-import.sh`)
+
+**Usage:**
+```bash
+./test-admin-setup.sh
+```
+
+**Prerequisites:**
+- Supabase local running (`npx supabase start`)
+- Dev server running (`npm run dev`)
+- WireGuard config files in `IMPORT_DIR`
+- `ENCRYPTION_KEY` set in `.env`
+
+**Expected Output:**
+```
+Step 1: Adding accepted domain to database...
+✅ Domain added/verified
+
+Step 2: Registering admin user...
+✅ Admin user registered successfully!
+
+Step 3: Importing WireGuard peers...
+✅ Import successful!
+
+Setup completed successfully!
+```
+
+**Note:** This is the **recommended first step** for setting up a fresh test environment. It handles all initial setup automatically.
+
+---
+
+### 1. User Registration Test (`test-register-user.sh`) 
+
+**Purpose:** Test regular user registration with domain validation.
+
+**What it tests:**
+- ✅ User registration endpoint
+- ✅ Domain whitelist validation
+- ✅ Role assignment (should be "user", not "admin")
+- ✅ Conflict handling (duplicate email)
+
+**Usage:**
+```bash
+# With default email (user@example.com)
+./test-register-user.sh
+
+# With custom email and password
+./test-register-user.sh user2@example.com MyPassword123
+
+# With custom email only (uses default password)
+./test-register-user.sh test@example.com
+```
+
+**Expected Output:**
+```
+HTTP Status: 201
+
+✅ User registered successfully!
+{
+  "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "status": "active",
+    "peer_limit": 10,
+    "roles": ["user"]
+  }
+}
+
+Summary:
+  Email: user@example.com
+  Roles: user
+  Peer limit: 10
+
+✅ User has correct role (user)
+```
+
+**Notes:**
+- First registered user automatically gets "admin" role
+- Subsequent users get "user" role
+- Domain must be in `accepted_domains` table
+
+---
+
+### 2. Admin Import Test (`test-admin-import.sh`)
 
 **Purpose:** Test bulk import of WireGuard configurations by admin.
 
@@ -186,26 +277,59 @@ All tests completed successfully!
 
 ## Complete Test Workflow
 
-To test the entire system from scratch:
+### Quick Setup (Recommended)
+
+Use the automated setup script for a fresh environment:
 
 ```bash
-# 1. Register admin user (first user becomes admin automatically)
-curl -X POST http://localhost:4321/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email": "admin@example.com", "password": "SecureP@ss123"}'
+# One command to set up everything
+./test-admin-setup.sh
+```
 
-# 2. Register regular user
+This will:
+1. Add `example.com` as accepted domain
+2. Register admin user
+3. Import WireGuard peers
+
+Then run additional tests:
+
+```bash
+# Register a regular user (simple script)
+./test-register-user.sh test2@example.com
+
+# OR register manually with curl
 curl -X POST http://localhost:4321/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email": "test2@example.com", "password": "SecureP@ss123"}'
 
-# 3. Run admin import test
-./test-admin-import.sh
-
-# 4. Run admin assign test
+# Test admin assigning peer to user
 ./test-admin-assign-peer.sh
 
-# 5. Run user operations test
+# Test regular user operations
+./test-user-peers.sh
+```
+
+### Manual Setup (Step by Step)
+
+To test the entire system from scratch manually:
+
+```bash
+# 1. Add accepted domain (via Supabase CLI or psql)
+echo "INSERT INTO app.accepted_domains (domain) VALUES ('example.com');" | npx supabase db execute --stdin
+
+# 2. Register admin user (first user becomes admin automatically)
+./test-register-user.sh admin@example.com
+
+# 3. Register regular user
+./test-register-user.sh test2@example.com
+
+# 4. Run admin import test
+./test-admin-import.sh
+
+# 5. Run admin assign test
+./test-admin-assign-peer.sh
+
+# 6. Run user operations test
 ./test-user-peers.sh
 ```
 
