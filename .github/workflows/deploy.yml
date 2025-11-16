@@ -88,6 +88,11 @@ jobs:
             #!/bin/bash
             set -e
             
+            echo "=== DEBUG: Environment variables ==="
+            echo "SUPABASE_URL: ${SUPABASE_URL:0:20}..."
+            echo "SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:0:20}..."
+            echo "===================================="
+            
             # Find the newest deployment archive
             ARCHIVE_FILE=$(ls -t /tmp/deployment-*.tar.gz 2>/dev/null | head -1)
             
@@ -100,14 +105,20 @@ jobs:
             
             # Define deployment path
             DEPLOY_PATH="/home/ubuntu/docker/wireguard-config-manager"
+            echo "DEBUG: DEPLOY_PATH=$DEPLOY_PATH"
             
             # Create deployment directory if it doesn't exist
+            echo "DEBUG: Creating $DEPLOY_PATH"
             mkdir -p "$DEPLOY_PATH"
+            echo "DEBUG: Directory created"
             
             # Backup current deployment (if exists)
+            echo "DEBUG: Checking for backup directory"
             if [ -d "$DEPLOY_PATH/backup" ]; then
+              echo "DEBUG: Removing old backup"
               rm -rf "$DEPLOY_PATH/backup"
             fi
+            echo "DEBUG: Backup check complete"
             
             # Backup .env to preserve it (if exists)
             if [ -f "$DEPLOY_PATH/.env" ]; then
