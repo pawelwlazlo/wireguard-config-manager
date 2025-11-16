@@ -1,0 +1,655 @@
+# WireGuard Config Manager - Testing Guide
+
+This guide describes the available test scripts for validating the WireGuard Config Manager API.
+
+## Prerequisites
+
+1. **Start the development server:**
+```bash
+npm run dev
+```
+
+2. **Set up environment variables in `.env`:**
+```bash
+# Supabase Configuration
+SUPABASE_URL=http://127.0.0.1:54321
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# Import Configuration
+IMPORT_DIR=/path/to/wireguard/configs
+ENCRYPTION_KEY=your-32-character-hex-key
+
+# Accepted Domains
+ACCEPTED_DOMAINS=example.com
+```
+
+3. **Create WireGuard config files** in `IMPORT_DIR`:
+```bash
+mkdir -p /path/to/wireguard/configs
+
+# Create sample configs (replace with real configs)
+cat > /path/to/wireguard/configs/peer1.conf <<EOF
+[Interface]
+PrivateKey = <private-key>
+Address = 10.0.0.2/32
+DNS = 1.1.1.1
+
+[Peer]
+PublicKey = <server-public-key>
+Endpoint = vpn.example.com:51820
+AllowedIPs = 0.0.0.0/0
+PersistentKeepalive = 25
+EOF
+```
+
+## Test Scripts
+
+### 0. Admin Setup & Import (`test-admin-setup.sh`) 🆕
+
+**Purpose:** Complete setup of test environment - domain, admin user, and peer import in one command.
+
+**What it does:**
+- ✅ Adds `example.com` to accepted domains
+- ✅ Registers admin user (`admin@example.com`)
+- ✅ Imports WireGuard peers (calls `test-admin-import.sh`)
+
+**Usage:**
+```bash
+./test-admin-setup.sh
+```
+
+**Prerequisites:**
+- Supabase local running (`npx supabase start`)
+- Dev server running (`npm run dev`)
+- WireGuard config files in `IMPORT_DIR`
+- `ENCRYPTION_KEY` set in `.env`
+
+**Expected Output:**
+```
+Step 1: Adding accepted domain to database...
+✅ Domain added/verified
+
+Step 2: Registering admin user...
+✅ Admin user registered successfully!
+
+Step 3: Importing WireGuard peers...
+✅ Import successful!
+
+Setup completed successfully!
+```
+
+**Note:** This is the **recommended first step** for setting up a fresh test environment. It handles all initial setup automatically.
+
+---
+
+### 1. User Registration Test (`test-register-user.sh`) 
+
+**Purpose:** Test regular user registration with domain validation.
+
+**What it tests:**
+- ✅ User registration endpoint
+- ✅ Domain whitelist validation
+- ✅ Role assignment (should be "user", not "admin")
+- ✅ Conflict handling (duplicate email)
+
+**Usage:**
+```bash
+# With default email (user@example.com)
+./test-register-user.sh
+
+# With custom email and password
+./test-register-user.sh user2@example.com MyPassword123
+
+# With custom email only (uses default password)
+./test-register-user.sh test@example.com
+```
+
+**Expected Output:**
+```
+HTTP Status: 201
+
+✅ User registered successfully!
+{
+  "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "status": "active",
+    "peer_limit": 10,
+    "roles": ["user"]
+  }
+}
+
+Summary:
+  Email: user@example.com
+  Roles: user
+  Peer limit: 10
+
+✅ User has correct role (user)
+```
+
+**Notes:**
+- First registered user automatically gets "admin" role
+- Subsequent users get "user" role
+- Domain must be in `accepted_domains` table
+
+---
+
+### 2. Admin Import Test (`test-admin-import.sh`)
+
+**Purpose:** Test bulk import of WireGuard configurations by admin.
+
+**What it tests:**
+- ✅ Admin authentication
+- ✅ Import endpoint authorization
+- ✅ Bulk peer import from directory
+- ✅ Batch tracking
+
+**Usage:**
+```bash
+./test-admin-import.sh
+```
+
+**Prerequisites:**
+- Admin user registered (`admin@example.com`)
+- WireGuard config files in `IMPORT_DIR`
+- `ENCRYPTION_KEY` set in `.env`
+
+**Expected Output:**
+```
+Step 1: Logging in as admin...
+✅ Login successful!
+
+Step 2: Importing WireGuard peers...
+✅ Import successful!
+
+Summary:
+  Files imported: 5
+  Batch ID: 123e4567-e89b-12d3-a456-426614174000
+```
+
+---
+
+### 2. Admin Assign Peer Test (`test-admin-assign-peer.sh`)
+
+**Purpose:** Test manual peer assignment by admin to a specific user.
+
+**What it tests:**
+- ✅ Admin authentication
+- ✅ User lookup by email
+- ✅ Available peers listing
+- ✅ Manual peer assignment
+- ✅ Peer limit validation
+
+**Usage:**
+```bash
+./test-admin-assign-peer.sh
+```
+
+**Prerequisites:**
+- Admin user registered (`admin@example.com`)
+- Target user registered (`test2@example.com`)
+- Available peers imported (run `test-admin-import.sh` first)
+
+**Expected Output:**
+```
+Step 1: Logging in as admin...
+✅ Login successful!
+
+Step 2: Finding user 'test2@example.com'...
+✅ Found user: test2@example.com
+
+Step 3: Fetching available peers...
+✅ Found 5 available peer(s)
+
+Step 4: Assigning peer to user...
+✅ Peer assigned successfully!
+
+Summary:
+  Peer ID: 987fcdeb-51a2-43f7-9abc-def012345678
+  Public Key: 10.0.0.2/32
+  Assigned to: test2@example.com (test2@example.com)
+  Status: active
+```
+
+---
+
+### 3. Change Password Test (`test-change-password.sh`)
+
+**Purpose:** Test password change functionality with verification.
+
+**What it tests:**
+- ✅ User authentication
+- ✅ Current password verification
+- ✅ Password change with new JWT generation
+- ✅ Old password invalidation
+- ✅ New password validation
+- ✅ JWT refresh after password change
+
+**Usage:**
+```bash
+# With default credentials
+./test-change-password.sh
+
+# With custom email and passwords
+./test-change-password.sh user@example.com OldPass@123 NewPass@456
+```
+
+**Prerequisites:**
+- User registered with known password
+
+**Expected Output:**
+```
+Step 1: Logging in...
+✓ Login successful
+
+Step 2: Changing password...
+✓ Password changed successfully
+✓ New JWT token received
+
+Step 3: Testing login with old password (should fail)...
+✓ Login with old password correctly rejected
+
+Step 4: Testing login with new password (should succeed)...
+✓ Login with new password successful
+
+Step 5: Verifying new JWT with /me endpoint...
+✓ User profile retrieved successfully
+
+✅ All password change tests passed!
+```
+
+**Notes:**
+- Returns a new JWT token after successful password change
+- Old JWT tokens remain valid until expiration
+- Password must meet security requirements (12+ chars, uppercase, lowercase, digit, special char)
+
+---
+
+### 4. User Peer Operations Test (`test-user-peers.sh`)
+
+**Purpose:** Test full peer lifecycle from regular user perspective.
+
+**What it tests:**
+- ✅ User authentication
+- ✅ User profile retrieval
+- ✅ List own peers (RLS enforcement)
+- ✅ Automatic peer claiming (FIFO)
+- ✅ Peer details retrieval
+- ✅ Friendly name update
+- ✅ Configuration download
+- ✅ Access control (403 on admin endpoints)
+
+**Usage:**
+```bash
+./test-user-peers.sh
+```
+
+**Prerequisites:**
+- User registered (`test2@example.com`)
+- Either:
+  - Available peers to claim, OR
+  - Peers already assigned to this user
+
+**Expected Output:**
+```
+Step 1: Logging in as regular user...
+✅ Login successful!
+User: test2@example.com
+Peer limit: 3
+
+Step 2: Fetching user profile...
+✅ Profile fetched successfully!
+
+Step 3: Listing own peers...
+✅ Peers fetched successfully!
+Active peers: 1 / 3
+
+Step 4: Claiming a new peer...
+✅ Peer claimed successfully!
+
+Step 5: Fetching peer details...
+✅ Peer details fetched successfully!
+
+Step 6: Updating peer friendly name...
+✅ Peer updated successfully!
+
+Step 7: Downloading peer configuration...
+✅ Configuration downloaded successfully!
+File saved to: /tmp/wireguard-test-...
+
+Step 8: Testing access control...
+✅ Access control working correctly! (403 Forbidden)
+
+All tests completed successfully!
+```
+
+---
+
+## Complete Test Workflow
+
+### Quick Setup (Recommended)
+
+Use the automated setup script for a fresh environment:
+
+```bash
+# One command to set up everything
+./test-admin-setup.sh
+```
+
+This will:
+1. Add `example.com` as accepted domain
+2. Register admin user
+3. Import WireGuard peers
+
+Then run additional tests:
+
+```bash
+# Register a regular user (simple script)
+./test-register-user.sh test2@example.com
+
+# OR register manually with curl
+curl -X POST http://localhost:4321/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "test2@example.com", "password": "SecureP@ss123"}'
+
+# Test admin assigning peer to user
+./test-admin-assign-peer.sh
+
+# Test regular user operations
+./test-user-peers.sh
+```
+
+### Manual Setup (Step by Step)
+
+To test the entire system from scratch manually:
+
+```bash
+# 1. Add accepted domain (via Supabase CLI or psql)
+echo "INSERT INTO app.accepted_domains (domain) VALUES ('example.com');" | npx supabase db execute --stdin
+
+# 2. Register admin user (first user becomes admin automatically)
+./test-register-user.sh admin@example.com
+
+# 3. Register regular user
+./test-register-user.sh test2@example.com
+
+# 4. Run admin import test
+./test-admin-import.sh
+
+# 5. Run admin assign test
+./test-admin-assign-peer.sh
+
+# 6. Run user operations test
+./test-user-peers.sh
+```
+
+## Common Issues
+
+### Issue: "No available peers to claim"
+**Solution:** Run `./test-admin-import.sh` to import peers first.
+
+### Issue: "User not found"
+**Solution:** Register the user:
+```bash
+curl -X POST http://localhost:4321/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "test2@example.com", "password": "SecureP@ss123"}'
+```
+
+### Issue: "IMPORT_DIR not configured"
+**Solution:** Add to `.env`:
+```bash
+IMPORT_DIR=/path/to/wireguard/configs
+```
+
+### Issue: "Email domain not accepted"
+**Solution:** Add domain to `.env`:
+```bash
+ACCEPTED_DOMAINS=example.com
+```
+
+Or add to database:
+```sql
+INSERT INTO app.accepted_domains (domain) VALUES ('example.com');
+```
+
+### Issue: "Failed to create import batch: foreign key violation"
+**Solution:** The user ID doesn't exist. Make sure you're logged in as a valid user.
+
+### Issue: "Peer limit exceeded"
+**Solution:** Admin can increase user's limit:
+```bash
+curl -X PATCH http://localhost:4321/api/v1/admin/users/{user_id} \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"peer_limit": 10}'
+```
+
+## Security Notes
+
+### Authentication
+- All endpoints except `/auth/register` and `/auth/login` require authentication
+- JWT tokens are issued on login and must be sent as `Authorization: Bearer <token>`
+- Access tokens expire after 15 minutes (configurable in Supabase)
+
+### Authorization
+- **Admin endpoints** (`/api/v1/admin/*`):
+  - Require `admin` role
+  - Use service_role client (bypass RLS)
+  - Full access to all resources
+
+- **User endpoints** (`/api/v1/peers/*`, `/api/v1/users/me`):
+  - Require authentication
+  - Use user JWT client (RLS enforced)
+  - Access only to own resources
+
+### Row Level Security (RLS)
+- Regular users can only access their own peers
+- Attempting to access another user's peer returns `404 Not Found` (not `403 Forbidden` to avoid information disclosure)
+- Admin operations bypass RLS using service_role key
+
+## Performance Testing
+
+To test concurrent peer claims (FIFO with SKIP LOCKED):
+
+```bash
+# Run multiple claim requests in parallel
+for i in {1..10}; do
+  curl -X POST http://localhost:4321/api/v1/peers/claim \
+    -H "Authorization: Bearer $USER_JWT" &
+done
+wait
+```
+
+Each request should get a unique peer without conflicts.
+
+## Cleanup
+
+To reset the database and start fresh:
+
+```bash
+# Reset Supabase local database
+npx supabase db reset
+
+# Re-register users and run tests again
+```
+
+## E2E Testing with Playwright
+
+### Running E2E Tests
+
+The project includes comprehensive end-to-end tests for the frontend views using Playwright.
+
+**Available commands:**
+
+```bash
+# Run all E2E tests (headless)
+npm run test:e2e
+
+# Run tests in interactive UI mode
+npm run test:e2e:ui
+
+# Run tests in debug mode
+npm run test:e2e:debug
+
+# Show test report
+npm run test:e2e:report
+```
+
+### Test Coverage
+
+#### Login View (`tests/e2e/login.spec.ts`)
+- ✅ Form validation (email, password)
+- ✅ Error handling (invalid credentials, too many attempts, server errors)
+- ✅ Successful login flow
+- ✅ Loading states
+- ✅ Accessibility (ARIA attributes)
+- ✅ Mobile responsiveness
+
+#### Register View (`tests/e2e/register.spec.ts`)
+- ✅ Form display with all elements (email, password, confirm password, checklist)
+- ✅ Email validation (format and domain restriction)
+- ✅ Dynamic password strength checklist
+- ✅ Password confirmation matching
+- ✅ Loading states during submission
+- ✅ Error handling:
+  - Invalid email domain (`InvalidDomain`)
+  - Existing email (`EmailExists`)
+  - Weak password (`WeakPassword`)
+  - Validation errors (`ValidationError`)
+  - Server errors (`AuthError`)
+  - Network failures
+- ✅ Successful registration with redirect
+- ✅ Navigation between login/register pages
+- ✅ Accessibility (ARIA attributes, roles, labels)
+- ✅ Mobile responsiveness (375px, 768px viewports)
+- ✅ Server error clearing on resubmission
+
+#### Change Password View (`tests/e2e/change-password.spec.ts`)
+- ✅ Form display with all elements (current password, new password, confirm password, checklist)
+- ✅ Password visibility toggle (show/hide)
+- ✅ Dynamic password strength checklist (12+ characters)
+- ✅ Password fields validation (current, new, confirm)
+- ✅ Password mismatch detection
+- ✅ Submit button state management
+- ✅ Loading states during submission
+- ✅ Error handling:
+  - Incorrect current password (`INCORRECT_CURRENT_PASSWORD`)
+  - Weak password (`WEAK_PASSWORD`)
+  - Authentication errors (`AuthError`)
+  - Session expiration (redirect to login)
+- ✅ Successful password change with redirect
+- ✅ JWT update in localStorage after success
+- ✅ Accessibility (ARIA attributes, roles, labels)
+- ✅ Mobile responsiveness (375px viewport)
+- ✅ Forced password change redirect (when `requires_password_change` flag is set)
+
+### Test Configuration
+
+Tests are configured in `playwright.config.ts` to run on:
+- **Browsers:** Chromium, Firefox, WebKit
+- **Mobile devices:** Pixel 5, iPhone 12
+- **Base URL:** `http://localhost:4321` (configurable via `BASE_URL` env var)
+
+### Writing New E2E Tests
+
+When adding new views, follow the existing test structure:
+
+1. Create test file in `tests/e2e/{view-name}.spec.ts`
+2. Use descriptive test names
+3. Test all user interactions
+4. Mock API responses for consistent testing
+5. Verify accessibility attributes
+6. Test mobile viewports
+7. Handle loading and error states
+
+Example test structure:
+
+```typescript
+import { test, expect } from '@playwright/test';
+
+test.describe('View Name', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/route');
+  });
+
+  test('should display expected elements', async ({ page }) => {
+    // Test implementation
+  });
+  
+  // More tests...
+});
+```
+
+## Password Change Flow
+
+### Regular User Password Change
+
+Users can voluntarily change their password at any time:
+
+1. Navigate to `/change-password`
+2. Enter current password
+3. Enter new password (must meet requirements: 12+ chars, uppercase, lowercase, digit, special char)
+4. Confirm new password
+5. Submit form
+6. Receive new JWT token
+7. Redirect to home page
+
+### Forced Password Change (Admin Reset)
+
+When admin resets a user's password:
+
+1. Admin uses `/api/v1/admin/users/{id}/reset-password`
+2. System sets `requires_password_change = true` flag on user
+3. User logs in with temporary password
+4. Middleware redirects user to `/change-password`
+5. User must change password before accessing other pages
+6. After successful change, `requires_password_change` flag is reset to `false`
+7. User can now access all pages normally
+
+### Testing Forced Password Change
+
+```bash
+# 1. Login as admin
+ADMIN_JWT=$(curl -s -X POST http://localhost:4321/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"AdminPass@123"}' | jq -r '.jwt')
+
+# 2. Reset user password
+TEMP_PASSWORD=$(curl -s -X POST http://localhost:4321/api/v1/admin/users/{user-id}/reset-password \
+  -H "Authorization: Bearer $ADMIN_JWT" | jq -r '.temporary_password')
+
+# 3. Login as user with temporary password
+USER_JWT=$(curl -s -X POST http://localhost:4321/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"user@example.com\",\"password\":\"$TEMP_PASSWORD\"}" | jq -r '.jwt')
+
+# 4. User profile should have requires_password_change = true
+curl -s -X GET http://localhost:4321/api/v1/users/me \
+  -H "Authorization: Bearer $USER_JWT" | jq '.requires_password_change'
+# Output: true
+
+# 5. Change password
+NEW_JWT=$(curl -s -X POST http://localhost:4321/api/v1/users/me/change-password \
+  -H "Authorization: Bearer $USER_JWT" \
+  -H "Content-Type: application/json" \
+  -d "{\"current_password\":\"$TEMP_PASSWORD\",\"new_password\":\"NewSecure@Pass123\"}" | jq -r '.jwt')
+
+# 6. Verify flag is reset
+curl -s -X GET http://localhost:4321/api/v1/users/me \
+  -H "Authorization: Bearer $NEW_JWT" | jq '.requires_password_change'
+# Output: false
+```
+
+## Next Steps
+
+- [ ] Implement audit log viewer
+- [ ] Add rate limiting tests
+- [ ] Test user deactivation cascade
+- [ ] Load testing with multiple concurrent users
+- [ ] Add E2E tests for admin dashboard views
+- [x] Test password change flow
+- [x] Test forced password change after admin reset
+

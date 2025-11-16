@@ -5,7 +5,8 @@
 
 import type { SupabaseClient } from "@/db/supabase.client";
 import type { Tables } from "@/db/database.types";
-import type { PeerDto, PeerStatus } from "@/types";
+import type { PeerDto, PeerStatus, PeerRowVM } from "@/types";
+import { logAudit } from "./auditService";
 
 type PeerRow = Tables<{ schema: "app" }, "peers">;
 
@@ -177,6 +178,12 @@ export async function claimNextPeer(
     throw new Error("Failed to claim peer");
   }
 
+  // Log audit event
+  await logAudit(supabase, "PEER_CLAIM", userId, "peers", data.id, {
+    peer_id: data.id,
+    public_key: data.public_key,
+  });
+
   return mapToPeerDto(data);
 }
 
@@ -219,8 +226,17 @@ export async function updatePeerFriendlyName(
  */
 export async function revokePeer(
   supabase: SupabaseClient,
-  peerId: string
+  peerId: string,
+  actorId: string
 ): Promise<void> {
+  // Get peer data before revoking for audit log
+  const { data: peerData } = await supabase
+    .schema("app")
+    .from("peers")
+    .select("id, public_key, owner_id")
+    .eq("id", peerId)
+    .single();
+
   // Update peer status to inactive
   const { error } = await supabase
     .schema("app")
@@ -237,6 +253,15 @@ export async function revokePeer(
       throw new Error("NotFound");
     }
     throw new Error(`Failed to revoke peer: ${error.message}`);
+  }
+
+  // Log audit event
+  if (peerData) {
+    await logAudit(supabase, "PEER_REVOKE", actorId, "peers", peerId, {
+      peer_id: peerId,
+      public_key: peerData.public_key,
+      owner_id: peerData.owner_id,
+    });
   }
 }
 
@@ -335,6 +360,29 @@ export async function assignPeerToUser(
 }
 
 /**
+ * Assign peer to user with audit logging (admin only)
+ * Wrapper around assignPeerToUser that logs the audit event
+ * Note: Authorization check should be done in the endpoint handler
+ */
+export async function assignPeerToUserWithAudit(
+  supabase: SupabaseClient,
+  peerId: string,
+  targetUserId: string,
+  adminId: string
+): Promise<PeerDto> {
+  const peer = await assignPeerToUser(supabase, peerId, targetUserId);
+
+  // Log audit event
+  await logAudit(supabase, "PEER_ASSIGN", adminId, "peers", peerId, {
+    peer_id: peerId,
+    target_user_id: targetUserId,
+    public_key: peer.public_key,
+  });
+
+  return peer;
+}
+
+/**
  * Get paginated list of all peers (admin only)
  * Note: Authorization check should be done in the endpoint handler
  */
@@ -347,7 +395,7 @@ export async function getPeersAdmin(
     size?: number;
   }
 ): Promise<{
-  items: PeerDto[];
+  items: PeerRowVM[];
   total: number;
   page: number;
   size: number;
@@ -360,7 +408,7 @@ export async function getPeersAdmin(
     .schema("app")
     .from("peers")
     .select(
-      "id, public_key, status, friendly_name, claimed_at, revoked_at",
+      "id, public_key, status, friendly_name, claimed_at, revoked_at, owner_id, users!peers_owner_id_fkey(email)",
       { count: "exact" }
     )
     .order("imported_at", { ascending: false });
@@ -383,8 +431,20 @@ export async function getPeersAdmin(
     throw new Error(`Failed to fetch peers: ${error.message}`);
   }
 
+  // Map to PeerRowVM with owner information
+  const items: PeerRowVM[] = (data || []).map((row: any) => ({
+    id: row.id,
+    public_key: row.public_key,
+    status: row.status,
+    friendly_name: row.friendly_name,
+    claimed_at: row.claimed_at,
+    revoked_at: row.revoked_at,
+    owner_id: row.owner_id,
+    owner_email: row.users?.email || null,
+  }));
+
   return {
-    items: (data || []).map(mapToPeerDto),
+    items,
     total: count || 0,
     page,
     size,

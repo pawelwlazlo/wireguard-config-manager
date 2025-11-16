@@ -31,11 +31,15 @@ export type RoleName = Tables<{ schema: "app" }, "roles">["name"];
 /* -------------------------------------------------------------------------- */
 
 export interface UserDto
-  extends Pick<UserRow, "id" | "email" | "status" | "peer_limit" | "created_at"> {
+  extends Pick<UserRow, "id" | "email" | "status" | "peer_limit" | "created_at" | "requires_password_change"> {
   /**
    * Roles mapped through user_roles join. Example: ["user"], ["admin"].
    */
   roles: RoleName[];
+  /**
+   * Count of peers owned by user (only included in admin list endpoint)
+   */
+  peers_count?: number;
 }
 
 export type PeerDto = Pick<
@@ -104,6 +108,11 @@ export interface AssignPeerCommand {
   user_id: string;
 }
 
+export interface ChangePasswordCommand {
+  current_password: string;
+  new_password: string;
+}
+
 // No body expected for FIFO claim, logout, revoke, etc. Therefore not modelled here.
 
 /* -------------------------------------------------------------------------- */
@@ -114,3 +123,146 @@ export interface AssignPeerCommand {
 export type AuditEvent = Enums<{ schema: "app" }, "audit_event_enum">;
 export type PeerStatus = Enums<{ schema: "app" }, "peer_status_enum">;
 export type UserStatus = Enums<{ schema: "app" }, "user_status_enum">;
+
+/* -------------------------------------------------------------------------- */
+/*                             Admin View Models                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Filters for admin peers list
+ */
+export interface PeerFiltersState {
+  status?: PeerStatus;
+  owner?: string; // UUID
+}
+
+/**
+ * Extended peer DTO with owner email for admin view
+ */
+export interface PeerRowVM extends PeerDto {
+  owner_email?: string | null;
+  owner_id?: string | null;
+}
+
+/**
+ * Complete state for admin peers view
+ */
+export interface AdminPeersVM {
+  peers: PeerRowVM[];
+  page: number;
+  size: number;
+  total: number;
+  filters: PeerFiltersState;
+  loading: boolean;
+  error?: string;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                        Admin Users View Models                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Extended user DTO with computed fields for admin view
+ */
+export interface UserVM {
+  id: string;
+  email: string;
+  domain: string; // extracted from email
+  roles: RoleName[];
+  status: UserStatus;
+  peerLimit: number;
+  peersCount: number;
+  createdAt: string; // ISO
+}
+
+/**
+ * Filters for admin users list
+ */
+export interface UserFilter {
+  status?: UserStatus;
+  domain?: string;
+  role?: RoleName;
+}
+
+/**
+ * Complete state for admin users view
+ */
+export interface AdminUsersVM {
+  users: UserVM[];
+  page: number;
+  size: number;
+  total: number;
+  sort: string; // e.g. "email:asc"
+  filters: UserFilter;
+  loading: boolean;
+  error?: string;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                        Admin Audit Log View Models                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Sort options for audit log table
+ */
+export type AuditSortOption = 
+  | "created_at:asc" 
+  | "created_at:desc" 
+  | "event_type:asc" 
+  | "event_type:desc";
+
+/**
+ * Filters for admin audit log
+ */
+export interface AuditFiltersState {
+  eventType?: AuditEvent;
+  from?: Date;
+  to?: Date;
+}
+
+/**
+ * Complete state for admin audit log page
+ */
+export interface AuditPageState {
+  page: number; // 1-based
+  size: number; // default 20
+  sort: AuditSortOption;
+  filters: AuditFiltersState;
+}
+
+/**
+ * Result of useAuditLog hook
+ */
+export interface UseAuditLogResult {
+  data?: Page<AuditDto>;
+  loading: boolean;
+  error?: string;
+  setState(state: Partial<AuditPageState>): void;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                        Admin Config View Models                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * System status indicator for config view
+ */
+export type SystemStatus = "ok" | "degraded" | "down";
+
+/**
+ * View model for single config item
+ */
+export interface ConfigItemVM {
+  key: string;
+  value: string;
+}
+
+/**
+ * Complete state for admin config page
+ */
+export interface AdminConfigState {
+  items: ConfigItemVM[];
+  status: SystemStatus;
+  loading: boolean;
+  error: string | null;
+}

@@ -6,6 +6,7 @@
 import type { SupabaseClient } from "@/db/supabase.client";
 import type { Tables } from "@/db/database.types";
 import type { UserDto, UserStatus, RoleName } from "@/types";
+import { logAudit } from "./auditService";
 
 type UserRow = Tables<{ schema: "app" }, "users">;
 type RoleRow = Tables<{ schema: "app" }, "roles">;
@@ -14,7 +15,7 @@ type RoleRow = Tables<{ schema: "app" }, "roles">;
  * Map database row to UserDto with roles
  */
 function mapToUserDto(
-  row: Pick<UserRow, "id" | "email" | "status" | "peer_limit" | "created_at">,
+  row: Pick<UserRow, "id" | "email" | "status" | "peer_limit" | "created_at" | "requires_password_change">,
   roles: RoleName[]
 ): UserDto {
   return {
@@ -23,6 +24,7 @@ function mapToUserDto(
     status: row.status,
     peer_limit: row.peer_limit,
     created_at: row.created_at,
+    requires_password_change: row.requires_password_change,
     roles,
   };
 }
@@ -39,7 +41,7 @@ export async function getProfile(
   const { data: user, error: userError } = await supabase
     .schema("app")
     .from("users")
-    .select("id, email, status, peer_limit, created_at")
+    .select("id, email, status, peer_limit, created_at, requires_password_change")
     .eq("id", userId)
     .single();
 
@@ -68,13 +70,14 @@ export async function getProfile(
 
 /**
  * Get paginated list of users (admin only)
- * Supports filtering by status and domain
+ * Supports filtering by status, domain, and role
  */
 export async function listUsers(
   supabase: SupabaseClient,
   options: {
     status?: UserStatus;
     domain?: string;
+    role?: RoleName;
     page?: number;
     size?: number;
     sort?: string;
@@ -93,7 +96,7 @@ export async function listUsers(
   let query = supabase
     .schema("app")
     .from("users")
-    .select("id, email, status, peer_limit, created_at", { count: "exact" });
+    .select("id, email, status, peer_limit, created_at, requires_password_change", { count: "exact" });
 
   // Apply filters
   if (options.status) {
@@ -146,15 +149,48 @@ export async function listUsers(
     rolesMap.get(userId)!.push(roleName);
   });
 
-  // Map users to DTOs
-  const items = users.map((user) => {
+  // Filter by role if specified
+  let filteredUsers = users;
+  if (options.role) {
+    filteredUsers = users.filter((user) => {
+      const userRoles = rolesMap.get(user.id) || [];
+      return userRoles.includes(options.role as RoleName);
+    });
+  }
+
+  // Get peers count for all users in batch
+  const { data: peersCounts, error: peersError } = await supabase
+    .schema("app")
+    .from("peers")
+    .select("owner_id")
+    .in("owner_id", userIds);
+
+  if (peersError) {
+    throw new Error("DatabaseError");
+  }
+
+  // Build a map of user_id -> peers_count
+  const peersCountMap = new Map<string, number>();
+  (peersCounts || []).forEach((peer) => {
+    const ownerId = peer.owner_id;
+    if (ownerId) {
+      peersCountMap.set(ownerId, (peersCountMap.get(ownerId) || 0) + 1);
+    }
+  });
+
+  // Map users to DTOs with peers_count
+  const items = filteredUsers.map((user) => {
     const roles = rolesMap.get(user.id) || [];
-    return mapToUserDto(user, roles);
+    const dto = mapToUserDto(user, roles);
+    return {
+      ...dto,
+      peers_count: peersCountMap.get(user.id) || 0,
+    };
   });
 
   return {
     items,
-    total: count || 0,
+    total: options.role ? items.length : (count || 0),
     page,
     size,
   };
@@ -177,7 +213,7 @@ export async function updateUser(
   const { data: currentUser, error: fetchError } = await supabase
     .schema("app")
     .from("users")
-    .select("id, email, status, peer_limit, created_at")
+    .select("id, email, status, peer_limit, created_at, requires_password_change")
     .eq("id", userId)
     .single();
 
@@ -214,6 +250,22 @@ export async function updateUser(
       new_limit: updates.peer_limit,
       changed_by: adminId,
     });
+
+    // Log audit event for limit change
+    await logAudit(supabase, "LIMIT_CHANGE", adminId, "users", userId, {
+      old_limit: currentUser.peer_limit,
+      new_limit: updates.peer_limit,
+      user_email: currentUser.email,
+    });
+  }
+
+  // Log audit event if status changed to inactive
+  if (updates.status === "inactive" && currentUser.status !== "inactive") {
+    await logAudit(supabase, "USER_DEACTIVATE", adminId, "users", userId, {
+      user_email: currentUser.email,
+      old_status: currentUser.status,
+      new_status: updates.status,
+    });
   }
 
   // Update user
@@ -222,7 +274,7 @@ export async function updateUser(
     .from("users")
     .update(updates)
     .eq("id", userId)
-    .select("id, email, status, peer_limit, created_at")
+    .select("id, email, status, peer_limit, created_at, requires_password_change")
     .single();
 
   if (updateError || !updatedUser) {
@@ -319,6 +371,24 @@ export async function resetUserPassword(
     user_id: userId,
     token: temporaryPassword, // In production, this should be hashed
     expires_at: expiresAt.toISOString(),
+  });
+
+  // Set requires_password_change flag to force user to change password on next login
+  const { error: updateFlagError } = await supabase
+    .schema("app")
+    .from("users")
+    .update({ requires_password_change: true })
+    .eq("id", userId);
+
+  if (updateFlagError) {
+    console.error("Error setting requires_password_change flag:", updateFlagError);
+    // Don't fail the entire operation if this update fails
+  }
+
+  // Log audit event
+  await logAudit(supabase, "RESET_PASSWORD", adminId, "users", userId, {
+    user_email: user.email,
+    reset_by_admin: adminId,
   });
 
   return temporaryPassword;

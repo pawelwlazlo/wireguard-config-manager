@@ -297,6 +297,7 @@ export type Database = {
           email: string;
           id: string;
           peer_limit: number;
+          requires_password_change: boolean;
           status: Database["app"]["Enums"]["user_status_enum"];
           updated_at: string;
         };
@@ -305,6 +306,7 @@ export type Database = {
           email: string;
           id?: string;
           peer_limit?: number;
+          requires_password_change?: boolean;
           status?: Database["app"]["Enums"]["user_status_enum"];
           updated_at?: string;
         };
@@ -313,6 +315,7 @@ export type Database = {
           email?: string;
           id?: string;
           peer_limit?: number;
+          requires_password_change?: boolean;
           status?: Database["app"]["Enums"]["user_status_enum"];
           updated_at?: string;
         };
@@ -340,6 +343,7 @@ export type Database = {
         | "PEER_DOWNLOAD"
         | "PEER_REVOKE"
         | "RESET_PASSWORD"
+        | "PASSWORD_CHANGE"
         | "LIMIT_CHANGE"
         | "USER_DEACTIVATE"
         | "IMPORT";

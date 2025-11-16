@@ -40,8 +40,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Logout user via service
     await logoutUser(locals.supabase, userId);
 
+    // Clear JWT cookie
+    // Use Secure flag only in production (HTTPS)
+    const isProduction = import.meta.env.PROD;
+    const secureFlag = isProduction ? "; Secure" : "";
+    const headers = new Headers({
+      "Set-Cookie": `jwt=; Path=/; HttpOnly${secureFlag}; SameSite=Lax; Max-Age=0`, // Expire immediately
+    });
+
     // Return 204 No Content on successful logout
-    return new Response(null, { status: 204 });
+    return new Response(null, { 
+      status: 204,
+      headers,
+    });
   } catch (error) {
     console.error("Error during user logout:", error);
 

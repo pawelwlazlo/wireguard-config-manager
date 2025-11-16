@@ -4,7 +4,6 @@
  */
 
 import type { APIRoute } from "astro";
-import { getProfile } from "@/lib/services/userService";
 
 export const prerender = false;
 
@@ -18,16 +17,8 @@ export const GET: APIRoute = async ({ locals }) => {
       );
     }
 
-    const profile = await getProfile(locals.supabase, locals.user.id);
-
-    if (!profile) {
-      return new Response(
-        JSON.stringify({ error: "NotFound", message: "User profile not found" }),
-        { status: 404, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    return new Response(JSON.stringify(profile), {
+    // User profile is already loaded by middleware
+    return new Response(JSON.stringify(locals.user), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });

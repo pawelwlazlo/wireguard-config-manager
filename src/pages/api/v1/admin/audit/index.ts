@@ -17,24 +17,31 @@ const AUDIT_EVENT_TYPES = [
   "PEER_DOWNLOAD",
   "PEER_REVOKE",
   "RESET_PASSWORD",
+  "PASSWORD_CHANGE",
   "LIMIT_CHANGE",
   "USER_DEACTIVATE",
   "IMPORT",
 ] as const;
 
+// Helper to parse date string to Date object
+const dateStringSchema = z.preprocess(
+  (val) => {
+    if (typeof val === "string" && val.length > 0) {
+      const parsed = Date.parse(val);
+      if (!isNaN(parsed)) {
+        return new Date(val);
+      }
+    }
+    return undefined;
+  },
+  z.date().optional()
+);
+
 // Validation schema for query parameters
 const AuditQuerySchema = z.object({
   event_type: z.enum(AUDIT_EVENT_TYPES).optional(),
-  from: z
-    .string()
-    .datetime()
-    .transform((val) => new Date(val))
-    .optional(),
-  to: z
-    .string()
-    .datetime()
-    .transform((val) => new Date(val))
-    .optional(),
+  from: dateStringSchema,
+  to: dateStringSchema,
   page: z.coerce.number().int().min(1).optional().default(1),
   size: z.coerce.number().int().min(1).max(100).optional().default(20),
   sort: z
@@ -65,12 +72,12 @@ export const GET: APIRoute = async ({ url, locals }) => {
 
     // Parse and validate query parameters
     const queryParams = {
-      event_type: url.searchParams.get("event_type"),
-      from: url.searchParams.get("from"),
-      to: url.searchParams.get("to"),
-      page: url.searchParams.get("page"),
-      size: url.searchParams.get("size"),
-      sort: url.searchParams.get("sort"),
+      event_type: url.searchParams.get("event_type") || undefined,
+      from: url.searchParams.get("from") || undefined,
+      to: url.searchParams.get("to") || undefined,
+      page: url.searchParams.get("page") || undefined,
+      size: url.searchParams.get("size") || undefined,
+      sort: url.searchParams.get("sort") || undefined,
     };
 
     const validationResult = AuditQuerySchema.safeParse(queryParams);

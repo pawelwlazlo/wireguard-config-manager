@@ -1,0 +1,26 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { AdminConfigPage } from '@/components/AdminConfigPage';
+
+// Redirect to login if not authenticated
+if (!Astro.locals.user) {
+	return Astro.redirect('/login');
+}
+
+// Check if user has admin role
+if (!Astro.locals.user.roles.includes('admin')) {
+	return Astro.redirect('/');
+}
+
+// Redirect to change password if required
+if (Astro.locals.user.requires_password_change) {
+	return Astro.redirect('/change-password');
+}
+
+export const prerender = false;
+---
+
+<Layout title="Admin - Configuration">
+	<AdminConfigPage client:load />
+</Layout>
+

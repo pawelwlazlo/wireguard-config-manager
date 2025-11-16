@@ -34,8 +34,23 @@ function parseWireGuardPeerConfig(content: string): string | null {
     if (inInterfaceSection && trimmed.startsWith("Address")) {
       const parts = trimmed.split("=");
       if (parts.length === 2) {
-        // Address is typically "10.0.0.2/32" - we'll use this as identifier
-        return parts[1].trim();
+        const address = parts[1].trim();
+        
+        // Validate that address doesn't contain unresolved variables
+        if (address.includes("${") || address.includes("$")) {
+          console.warn(`Address contains unresolved variables: ${address}`);
+          return null;
+        }
+        
+        // Validate that address looks like a valid IP/CIDR
+        // Should match patterns like: 10.0.0.2/32 or 10.0.0.2
+        const ipPattern = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(\/\d{1,2})?$/;
+        if (!ipPattern.test(address)) {
+          console.warn(`Address doesn't match valid IP format: ${address}`);
+          return null;
+        }
+        
+        return address;
       }
     }
   }

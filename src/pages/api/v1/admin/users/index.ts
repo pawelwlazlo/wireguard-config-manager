@@ -6,6 +6,7 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { listUsers } from "@/lib/services/userService";
+import { getSupabaseAdminClient } from "@/db/supabase.client";
 
 export const prerender = false;
 
@@ -13,6 +14,7 @@ export const prerender = false;
 const QuerySchema = z.object({
   status: z.enum(["active", "inactive"]).optional(),
   domain: z.string().min(1).optional(),
+  role: z.enum(["user", "admin"]).optional(),
   page: z.coerce.number().int().min(1).optional().default(1),
   size: z.coerce.number().int().min(1).max(100).optional().default(20),
   sort: z.string().regex(/^[a-z_]+:(asc|desc)$/).optional(),
@@ -37,12 +39,14 @@ export const GET: APIRoute = async ({ url, locals }) => {
     }
 
     // Parse and validate query parameters
+    // Convert null to undefined for optional parameters
     const queryParams = {
-      status: url.searchParams.get("status"),
-      domain: url.searchParams.get("domain"),
-      page: url.searchParams.get("page"),
-      size: url.searchParams.get("size"),
-      sort: url.searchParams.get("sort"),
+      status: url.searchParams.get("status") || undefined,
+      domain: url.searchParams.get("domain") || undefined,
+      role: url.searchParams.get("role") || undefined,
+      page: url.searchParams.get("page") || undefined,
+      size: url.searchParams.get("size") || undefined,
+      sort: url.searchParams.get("sort") || undefined,
     };
 
     const validationResult = QuerySchema.safeParse(queryParams);
@@ -58,11 +62,13 @@ export const GET: APIRoute = async ({ url, locals }) => {
       );
     }
 
-    const { status, domain, page, size, sort } = validationResult.data;
+    const { status, domain, role, page, size, sort } = validationResult.data;
 
-    const result = await listUsers(locals.supabase, {
+    // Use admin client to bypass RLS for listing all users
+    const result = await listUsers(getSupabaseAdminClient(), {
       status,
       domain,
+      role,
       page,
       size,
       sort,
