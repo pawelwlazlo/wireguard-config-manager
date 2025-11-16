@@ -76,29 +76,14 @@ jobs:
               rm -rf "$DEPLOY_PATH/backup"
             fi
             
-            # Debug: Show what we're working with
-            echo "=== DEPLOYMENT DEBUG INFO ==="
-            echo "DEPLOY_PATH value: [$DEPLOY_PATH]"
-            echo "DEPLOY_PATH length: ${#DEPLOY_PATH}"
-            echo "Current working directory: $(pwd)"
-            echo "Listing deployment directory:"
-            ls -la "$DEPLOY_PATH/" || echo "Directory does not exist"
-            echo "Checking for .env file with explicit path:"
-            test -f "$DEPLOY_PATH/.env" && echo "EXISTS" || echo "NOT FOUND"
-            ls -la "$DEPLOY_PATH/.env" 2>&1 || true
-            echo "Checking what is in DEPLOY_PATH:"
-            file "$DEPLOY_PATH/.env" 2>&1 || true
-            echo "============================"
-            
-            # Verify .env file exists BEFORE deployment
-            if [ ! -f "$DEPLOY_PATH/.env" ]; then
-              echo "ERROR: .env file not found in $DEPLOY_PATH"
-              echo "Please create .env file with required environment variables before deployment"
-              exit 1
+            # Backup .env to preserve it (if exists)
+            if [ -f "$DEPLOY_PATH/.env" ]; then
+              echo "Found .env file, backing up..."
+              cp "$DEPLOY_PATH/.env" "/tmp/.env.backup"
+            else
+              echo "Warning: .env file not found at $DEPLOY_PATH/.env"
+              echo "Will proceed without .env backup"
             fi
-            
-            # Backup .env to preserve it
-            cp "$DEPLOY_PATH/.env" "/tmp/.env.backup"
             
             # Create backup of current files (except .env file)
             if [ -f "$DEPLOY_PATH/docker-compose.yml" ]; then
@@ -111,9 +96,14 @@ jobs:
             tar -xzf /tmp/deployment.tar.gz
             rm /tmp/deployment.tar.gz
             
-            # Restore .env file (in case tar overwrote anything)
-            cp "/tmp/.env.backup" "$DEPLOY_PATH/.env"
-            rm "/tmp/.env.backup"
+            # Restore .env file (if it was backed up)
+            if [ -f "/tmp/.env.backup" ]; then
+              echo "Restoring .env from backup..."
+              cp "/tmp/.env.backup" "$DEPLOY_PATH/.env"
+              rm "/tmp/.env.backup"
+            else
+              echo "No .env backup found, skipping restore"
+            fi
             
             # Stop and remove old containers
             docker compose down || true
