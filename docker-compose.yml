@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  wireguard-manager:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wireguard-config-manager
+    ports:
+      - "4321:4321"
+    volumes:
+      - ./env/.env:/app/.env:ro
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - HOST=0.0.0.0
+      - PORT=4321
+

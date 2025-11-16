@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+pnpm-lock.yaml
+
+# Git
+.git/
+.gitignore
+
+# Environment variables
+.env
+.env.*
+env/
+
+# Build output (will be built inside container)
+dist/
+
+# Tests
+tests/
+test-*/
+playwright-report/
+test-results/
+coverage/
+
+# Development files
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Documentation
+*.md
+!README.md
+
+# CI/CD
+.github/
+
+# Misc
+.DS_Store
+.cache/
+.astro/
+
