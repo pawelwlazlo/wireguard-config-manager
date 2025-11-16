@@ -157,18 +157,14 @@ jobs:
             docker compose down || true
             
             # Create .env file with secrets
-            cat > .env << EOF
-            SUPABASE_URL=$SUPABASE_URL
-            SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
-            SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY
-            ENCRYPTION_KEY=$ENCRYPTION_KEY
-            IMPORT_DIR=$IMPORT_DIR
-            NODE_ENV=production
-            HOST=0.0.0.0
-            PORT=4321
-            EOF
+            printf "SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\nSUPABASE_SERVICE_ROLE_KEY=%s\nENCRYPTION_KEY=%s\nIMPORT_DIR=%s\nNODE_ENV=production\nHOST=0.0.0.0\nPORT=4321\n" \
+              "$SUPABASE_URL" "$SUPABASE_ANON_KEY" "$SUPABASE_SERVICE_ROLE_KEY" "$ENCRYPTION_KEY" "$IMPORT_DIR" > .env
             
             echo "✓ Created .env file from secrets"
+            
+            # Export variables for docker-compose build args
+            export SUPABASE_URL
+            export SUPABASE_ANON_KEY
             
             # Build and start containers
             docker compose build --no-cache
