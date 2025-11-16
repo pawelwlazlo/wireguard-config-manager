@@ -23,17 +23,18 @@ export function PeerList({
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+    <ul className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3" role="list">
       {peers.map((peer) => (
-        <PeerCard
-          key={peer.id}
-          peer={peer}
-          onUpdate={onPeerUpdate}
-          onDelete={onPeerDelete}
-          onDownload={onPeerDownload}
-        />
+        <li key={peer.id}>
+          <PeerCard
+            peer={peer}
+            onUpdate={onPeerUpdate}
+            onDelete={onPeerDelete}
+            onDownload={onPeerDownload}
+          />
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }
 

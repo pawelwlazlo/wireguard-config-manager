@@ -34,7 +34,7 @@ export function Dashboard() {
     setTimeout(() => setToast(null), 5000);
   };
 
-  const handleClaimSuccess = (peer: PeerDto) => {
+  const handleClaimSuccess = (_peer: PeerDto) => {
     showToast("Configuration claimed successfully!", "success");
   };
 
@@ -78,13 +78,14 @@ export function Dashboard() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center">
+      <div className="flex min-h-[400px] items-center justify-center" role="status" aria-live="polite">
         <div className="flex flex-col items-center space-y-4">
           <svg
             className="h-8 w-8 animate-spin text-primary"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
+            aria-hidden="true"
           >
             <circle
               className="opacity-25"
@@ -108,7 +109,7 @@ export function Dashboard() {
 
   if (error) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center">
+      <div className="flex min-h-[400px] items-center justify-center" role="alert" aria-live="assertive">
         <div className="max-w-md text-center">
           <div className="mb-4 text-destructive">
             <svg
@@ -118,6 +119,7 @@ export function Dashboard() {
               viewBox="0 0 24 24"
               strokeWidth={1.5}
               stroke="currentColor"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
@@ -130,7 +132,7 @@ export function Dashboard() {
           <p className="mb-4 text-sm text-muted-foreground">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="text-sm font-medium text-primary hover:underline"
+            className="text-sm font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"
           >
             Retry
           </button>
@@ -142,10 +144,13 @@ export function Dashboard() {
   const isAtLimit = claimedCount >= peerLimit;
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-8">
+    <main className="container mx-auto max-w-7xl px-4 py-8">
       {/* Toast Notification */}
       {toast && (
         <div
+          role="alert"
+          aria-live="polite"
+          aria-atomic="true"
           className={`fixed right-4 top-4 z-50 rounded-lg border p-4 shadow-lg transition-all ${
             toast.type === "success"
               ? "border-green-200 bg-green-50 text-green-900"
@@ -157,15 +162,15 @@ export function Dashboard() {
       )}
 
       {/* Header */}
-      <div className="mb-8">
+      <header className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <p className="mt-2 text-muted-foreground">
           Manage your WireGuard configurations
         </p>
-      </div>
+      </header>
 
       {/* Stats and CTA */}
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <section className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between" aria-label="Configuration statistics">
         <StatsCard
           claimedCount={claimedCount}
           peerLimit={peerLimit}
@@ -178,10 +183,10 @@ export function Dashboard() {
             onClaimError={handleClaimError}
           />
         </div>
-      </div>
+      </section>
 
       {/* Peer List or Empty State */}
-      <div className="rounded-lg border bg-card p-6">
+      <section className="rounded-lg border bg-card p-6" aria-label="Configuration list">
         <h2 className="mb-4 text-lg font-semibold">Your Configurations</h2>
         {peers.length === 0 ? (
           <EmptyState
@@ -199,7 +204,7 @@ export function Dashboard() {
             onPeerDownload={handlePeerDownload}
           />
         )}
-      </div>
+      </section>
 
       {/* Peer Details Modal */}
       <PeerDetailsModal
@@ -207,7 +212,7 @@ export function Dashboard() {
         onClose={() => setSelectedPeer(null)}
         onSave={handlePeerSave}
       />
-    </div>
+    </main>
   );
 }
 

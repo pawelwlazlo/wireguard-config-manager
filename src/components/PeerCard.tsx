@@ -61,6 +61,8 @@ export function PeerCard({ peer, onUpdate, onDelete, onDownload }: PeerCardProps
           isRevoked && "opacity-60"
         )}
         onClick={() => onUpdate(peer)}
+        role="article"
+        aria-label={`Configuration: ${peer.friendly_name || "Unnamed"}`}
       >
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-4">

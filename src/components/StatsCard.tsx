@@ -21,6 +21,8 @@ export function StatsCard({ claimedCount, peerLimit, className }: StatsCardProps
         "rounded-lg border bg-card p-6 text-card-foreground shadow-sm",
         className
       )}
+      role="region"
+      aria-label="Configuration usage statistics"
     >
       <div className="flex flex-col space-y-1.5">
         <h3 className="text-sm font-medium text-muted-foreground">
@@ -53,7 +55,14 @@ export function StatsCard({ claimedCount, peerLimit, className }: StatsCardProps
         )}
       </div>
       <div className="mt-4">
-        <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+        <div 
+          className="h-2 w-full overflow-hidden rounded-full bg-secondary"
+          role="progressbar"
+          aria-valuenow={claimedCount}
+          aria-valuemin={0}
+          aria-valuemax={peerLimit}
+          aria-label={`${claimedCount} of ${peerLimit} configurations used`}
+        >
           <div
             className={cn(
               "h-full transition-all duration-300",
