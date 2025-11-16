@@ -91,16 +91,16 @@ jobs:
             mkdir -p "$DEPLOY_PATH/env"
             
             # Stop and remove old containers
-            docker-compose down || true
+            docker compose down || true
             
             # Build and start new containers
-            docker-compose up --build -d
+            docker compose up --build -d
             
             # Clean up old Docker images
             docker image prune -f
             
             # Show container status
-            docker-compose ps
+            docker compose ps
             
             echo "Deployment completed successfully!"
             echo "Application is running on port 4321"

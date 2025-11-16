@@ -243,7 +243,7 @@ SSH into your VPS and check container status:
 
 ```bash
 cd /home/ubuntu/docker/wireguard-config-manager
-docker-compose ps
+docker compose ps
 ```
 
 Expected output:
@@ -254,7 +254,7 @@ wireguard-config-manager      "node ./dist/server/…"   wireguard-manager   Up 
 
 View container logs:
 ```bash
-docker-compose logs -f wireguard-manager
+docker compose logs -f wireguard-manager
 ```
 
 ### Troubleshooting
@@ -263,7 +263,7 @@ docker-compose logs -f wireguard-manager
 
 Check logs for errors:
 ```bash
-docker-compose logs wireguard-manager
+docker compose logs wireguard-manager
 ```
 
 Common issues:
@@ -285,7 +285,7 @@ Common issues:
 1. Check environment variables in `env/.env`
 2. Verify Supabase connection details
 3. Ensure database migrations have been run
-4. Check application logs: `docker-compose logs -f`
+4. Check application logs: `docker compose logs -f`
 
 ### Manual Deployment (Alternative)
 
@@ -310,11 +310,11 @@ If you prefer to deploy manually without GitHub Actions:
    rm deploy.tar.gz
    
    # Build and start containers
-   docker-compose down
-   docker-compose up --build -d
+   docker compose down
+   docker compose up --build -d
    
    # View logs
-   docker-compose logs -f
+   docker compose logs -f
    ```
 
 ### Updating the Application
@@ -336,13 +336,13 @@ If a deployment fails, you can rollback to the previous version:
 cd /home/ubuntu/docker/wireguard-config-manager
 
 # Stop current containers
-docker-compose down
+docker compose down
 
 # Restore from backup
 rsync -a --delete backup/ ./
 
 # Start containers with previous version
-docker-compose up -d
+docker compose up -d
 ```
 
 ## Application Routes
