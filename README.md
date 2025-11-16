@@ -169,7 +169,7 @@ The application can be deployed to a VPS using Docker and GitHub Actions for aut
    
    Add your environment variables (use `env.example` as reference):
    ```env
-   # Supabase Configuration
+   # Supabase Configuration (required for both build and runtime)
    PUBLIC_SUPABASE_URL=your_supabase_url
    PUBLIC_SUPABASE_ANON_KEY=your_anon_key
    SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
@@ -180,6 +180,8 @@ The application can be deployed to a VPS using Docker and GitHub Actions for aut
    
    # Add other required variables from env.example
    ```
+   
+   **Important**: The `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_ANON_KEY` variables are required during Docker build process for pre-rendering static pages. Make sure they are set in the `env/.env` file before running `docker compose up --build`.
 
 ### GitHub Configuration
 
