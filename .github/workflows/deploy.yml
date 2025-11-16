@@ -105,28 +105,20 @@ jobs:
               echo "No .env backup found, skipping restore"
             fi
             
-            # Fix .dockerignore - remove pnpm-lock.yaml if it exists
-            if [ -f "$DEPLOY_PATH/.dockerignore" ]; then
-              sed -i '/^pnpm-lock\.yaml$/d' "$DEPLOY_PATH/.dockerignore"
-              echo "Fixed .dockerignore by removing pnpm-lock.yaml"
-            fi
-            
-            # Install Node.js if not present
-            which node || curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y nodejs
-            
-            # Install pnpm globally using npm with sudo
-            which pnpm || sudo npm install -g pnpm
-            
-            # Make sure we're in the deployment directory
+            # Stop and remove old containers
             cd "$DEPLOY_PATH"
+            docker compose down || true
             
-            # Install dependencies
-            pnpm install --frozen-lockfile
+            # Build and start new containers with --no-cache to ensure fresh build
+            docker compose build --no-cache
+            docker compose up -d
             
-            # Build application
-            pnpm run build
+            # Clean up old Docker images
+            docker image prune -f
             
-            echo "✓ Build completed successfully!"
-            echo "✓ Files deployed to $DEPLOY_PATH"
-            echo "✓ To start application manually: node dist/server/entry.mjs"
+            # Show container status
+            docker compose ps
+            
+            echo "✓ Deployment completed successfully!"
+            echo "✓ Application is running on port 4321"
 
