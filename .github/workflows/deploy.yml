@@ -105,6 +105,12 @@ jobs:
               echo "No .env backup found, skipping restore"
             fi
             
+            # Fix .dockerignore - remove pnpm-lock.yaml if it exists
+            if [ -f "$DEPLOY_PATH/.dockerignore" ]; then
+              sed -i '/^pnpm-lock\.yaml$/d' "$DEPLOY_PATH/.dockerignore"
+              echo "Fixed .dockerignore by removing pnpm-lock.yaml"
+            fi
+            
             # Stop and remove old containers
             docker compose down || true
             
