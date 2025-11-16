@@ -19,7 +19,7 @@ services:
       - HOST=0.0.0.0
       - PORT=4321
     networks:
-      - supabase_network_ubuntu
+      - supabase_network_wireguard-config-manager
 
 networks:
   supabase_network_ubuntu:
