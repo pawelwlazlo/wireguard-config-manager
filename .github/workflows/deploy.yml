@@ -59,23 +59,27 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: "${{ env.ARCHIVE_NAME }}"
+          source: "deployment-*.tar.gz"
           target: "/tmp/"
       
       - name: Deploy on VPS
         uses: appleboy/ssh-action@v1.0.3
-        env:
-          ARCHIVE_NAME: ${{ env.ARCHIVE_NAME }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          envs: ARCHIVE_NAME
           script: |
             set -e
             
-            # Clean old deployment archives from /tmp
-            rm -f /tmp/deployment*.tar.gz 2>/dev/null || true
+            # Find the newest deployment archive
+            ARCHIVE_FILE=$(ls -t /tmp/deployment-*.tar.gz 2>/dev/null | head -1)
+            
+            if [ -z "$ARCHIVE_FILE" ]; then
+              echo "ERROR: No deployment archive found in /tmp/"
+              exit 1
+            fi
+            
+            echo "Found archive: $ARCHIVE_FILE"
             
             # Define deployment path (hardcoded)
             DEPLOY_PATH="/home/ubuntu/docker/wireguard-config-manager"
@@ -110,9 +114,11 @@ jobs:
             
             # Extract new files
             echo "Extracting files to: $(pwd)"
-            echo "Using archive: /tmp/$ARCHIVE_NAME"
-            tar -xzf "/tmp/$ARCHIVE_NAME"
-            rm "/tmp/$ARCHIVE_NAME"
+            echo "Using archive: $ARCHIVE_FILE"
+            tar -xzf "$ARCHIVE_FILE"
+            
+            # Clean up - remove this and old archives
+            rm -f /tmp/deployment-*.tar.gz
             
             # Verify extraction
             echo "=== Files after extraction ==="
