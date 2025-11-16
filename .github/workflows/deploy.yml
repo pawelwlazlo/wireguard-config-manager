@@ -91,8 +91,12 @@ jobs:
               rsync -a --exclude='.env' "$DEPLOY_PATH/" "$DEPLOY_PATH/backup/" || true
             fi
             
-            # Extract new files
+            # Remove old files (except .env backup)
             cd "$DEPLOY_PATH"
+            echo "Cleaning deployment directory..."
+            find . -mindepth 1 -maxdepth 1 ! -name 'backup' -exec rm -rf {} + 2>/dev/null || true
+            
+            # Extract new files
             echo "Extracting files to: $(pwd)"
             tar -xzf /tmp/deployment.tar.gz
             rm /tmp/deployment.tar.gz
