@@ -20,10 +20,15 @@ export function getSupabaseClient(): SupabaseClient {
     const supabaseAnonKey = import.meta.env.SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error('Missing SUPABASE_URL or SUPABASE_ANON_KEY environment variables');
+      // During build/prerender, env vars might not be available - use dummy client
+      console.warn('Missing SUPABASE_URL or SUPABASE_ANON_KEY - using dummy client for build');
+      _supabaseClient = createClient<Database>(
+        'https://dummy.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1bW15IiwidW9sZSI6ImFub24iLCJpYXQiOjE2NDUxOTI4MDAsImV4cCI6MTk2MDc2ODgwMH0.dummy'
+      );
+    } else {
+      _supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey);
     }
-
-    _supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey);
   }
   return _supabaseClient;
 }
@@ -38,15 +43,26 @@ export function getSupabaseAdminClient(): SupabaseClient {
     const supabaseServiceRoleKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseServiceRoleKey) {
-      throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables');
+      // During build/prerender, env vars might not be available - use dummy client
+      console.warn('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY - using dummy admin client for build');
+      _supabaseAdminClient = createClient<Database>(
+        'https://dummy.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1bW15IiwdW9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTY0NTE5MjgwMCwiZXhwIjoxOTYwNzY4ODAwfQ.dummy',
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        }
+      );
+    } else {
+      _supabaseAdminClient = createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      });
     }
-
-    _supabaseAdminClient = createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    });
   }
   return _supabaseAdminClient;
 }
