@@ -107,19 +107,21 @@ jobs:
             
             # DEBUG: Show where we are and what's here
             echo "=== DEBUG: Current location and files ==="
-            echo "Current directory: $(pwd)"
-            echo "DEPLOY_PATH: $DEPLOY_PATH"
-            echo "Files in DEPLOY_PATH:"
-            ls -la "$DEPLOY_PATH" | head -20
-            echo "Checking for .env:"
-            test -f "$DEPLOY_PATH/.env" && echo ".env EXISTS" || echo ".env NOT FOUND"
+            pwd
+            echo "Files in current directory:"
+            ls -la | head -20
+            echo "Checking for .env in current dir:"
+            test -f ./.env && echo ".env EXISTS" || echo ".env NOT FOUND"
+            if [ -f ./.env ]; then
+              echo "Size of .env: $(stat -f%z .env 2>/dev/null || stat -c%s .env 2>/dev/null) bytes"
+            fi
             echo "Checking for docker-compose.yml:"
-            test -f "$DEPLOY_PATH/docker-compose.yml" && echo "docker-compose.yml EXISTS" || echo "docker-compose.yml NOT FOUND"
+            test -f ./docker-compose.yml && echo "docker-compose.yml EXISTS" || echo "docker-compose.yml NOT FOUND"
             echo "========================================"
             
             # Stop and remove old containers
             cd "$DEPLOY_PATH"
-            echo "After cd, current directory: $(pwd)"
+            echo "After cd to deploy path, now at: $(pwd)"
             docker compose down || true
             
             # Build and start new containers with --no-cache to ensure fresh build
