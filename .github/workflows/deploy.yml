@@ -138,6 +138,10 @@ jobs:
             
             echo "✓ Created .env file from GitHub secrets"
             
+            # Export environment variables for docker-compose build
+            export SUPABASE_URL="${{ secrets.SUPABASE_URL }}"
+            export SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}"
+            
             # Build and start new containers with --no-cache to ensure fresh build
             docker compose build --no-cache
             docker compose up -d
