@@ -10,18 +10,15 @@ export const prerender = false;
 
 export const GET: APIRoute = async ({ locals }) => {
   try {
-    // TODO: Check if user is authenticated (when auth is implemented)
-    // if (!locals.user) {
-    //   return new Response(
-    //     JSON.stringify({ error: "Unauthorized", message: "Authentication required" }),
-    //     { status: 401, headers: { "Content-Type": "application/json" } }
-    //   );
-    // }
+    // Check if user is authenticated
+    if (!locals.user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", message: "Authentication required" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
-    // TODO: Replace with locals.user.id when auth is implemented
-    const mockUserId = "00000000-0000-0000-0000-000000000000";
-
-    const profile = await getProfile(locals.supabase, mockUserId);
+    const profile = await getProfile(locals.supabase, locals.user.id);
 
     if (!profile) {
       return new Response(

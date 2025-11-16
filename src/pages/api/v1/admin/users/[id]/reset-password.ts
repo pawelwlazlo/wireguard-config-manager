@@ -6,6 +6,7 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { resetUserPassword } from "@/lib/services/userService";
+import { getSupabaseAdminClient } from "@/db/supabase.client";
 
 export const prerender = false;
 
@@ -14,19 +15,21 @@ const IdParamSchema = z.uuid();
 
 export const POST: APIRoute = async ({ params, locals }) => {
   try {
-    // TODO: Check if user is authenticated and is admin (when auth is implemented)
-    // if (!locals.user) {
-    //   return new Response(
-    //     JSON.stringify({ error: "Unauthorized", message: "Authentication required" }),
-    //     { status: 401, headers: { "Content-Type": "application/json" } }
-    //   );
-    // }
-    // if (!locals.user.roles.includes("admin")) {
-    //   return new Response(
-    //     JSON.stringify({ error: "Forbidden", message: "Admin access required" }),
-    //     { status: 403, headers: { "Content-Type": "application/json" } }
-    //   );
-    // }
+    // Check if user is authenticated
+    if (!locals.user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", message: "Authentication required" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if user has admin role
+    if (!locals.user.roles.includes("admin")) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden", message: "Admin access required" }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
     // Validate path parameter
     const paramResult = IdParamSchema.safeParse(params.id);
@@ -43,16 +46,11 @@ export const POST: APIRoute = async ({ params, locals }) => {
 
     const userId = paramResult.data;
 
-    // TODO: Replace with locals.user.id when auth is implemented
-    const mockAdminId = "00000000-0000-0000-0000-000000000001";
-
-    // TODO: Pass admin Supabase client (service_role) when available
-    // For now we pass null to indicate admin client is not available
     const temporaryPassword = await resetUserPassword(
       locals.supabase,
-      null, // supabaseAdmin client not yet implemented
+      getSupabaseAdminClient(),
       userId,
-      mockAdminId
+      locals.user.id
     );
 
     // TODO: Add audit log event when audit service is implemented

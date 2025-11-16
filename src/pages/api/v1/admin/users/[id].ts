@@ -19,19 +19,21 @@ const UpdateUserBodySchema = z.object({
 
 export const PATCH: APIRoute = async ({ params, request, locals }) => {
   try {
-    // TODO: Check if user is authenticated and is admin (when auth is implemented)
-    // if (!locals.user) {
-    //   return new Response(
-    //     JSON.stringify({ error: "Unauthorized", message: "Authentication required" }),
-    //     { status: 401, headers: { "Content-Type": "application/json" } }
-    //   );
-    // }
-    // if (!locals.user.roles.includes("admin")) {
-    //   return new Response(
-    //     JSON.stringify({ error: "Forbidden", message: "Admin access required" }),
-    //     { status: 403, headers: { "Content-Type": "application/json" } }
-    //   );
-    // }
+    // Check if user is authenticated
+    if (!locals.user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", message: "Authentication required" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if user has admin role
+    if (!locals.user.roles.includes("admin")) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden", message: "Admin access required" }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
     // Validate path parameter
     const paramResult = IdParamSchema.safeParse(params.id);
@@ -88,13 +90,10 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
       );
     }
 
-    // TODO: Replace with locals.user.id when auth is implemented
-    const mockAdminId = "00000000-0000-0000-0000-000000000001";
-
     const updatedUser = await updateUser(
       locals.supabase,
       userId,
-      mockAdminId,
+      locals.user.id,
       bodyResult.data
     );
 

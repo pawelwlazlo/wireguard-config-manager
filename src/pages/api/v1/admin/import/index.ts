@@ -11,23 +11,21 @@ export const prerender = false;
 
 export const POST: APIRoute = async ({ locals }) => {
   try {
-    // TODO: Check if user is authenticated and is admin (when auth is implemented)
-    // if (!locals.user) {
-    //   return new Response(
-    //     JSON.stringify({ error: "Unauthorized", message: "Authentication required" }),
-    //     { status: 401, headers: { "Content-Type": "application/json" } }
-    //   );
-    // }
-    // if (!locals.user.roles.includes("admin")) {
-    //   return new Response(
-    //     JSON.stringify({ error: "Forbidden", message: "Admin access required" }),
-    //     { status: 403, headers: { "Content-Type": "application/json" } }
-    //   );
-    // }
+    // Check if user is authenticated
+    if (!locals.user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", message: "Authentication required" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
-    // Mock admin user ID for testing (until auth is implemented)
-    // In production, this would be: locals.user.id
-    const mockAdminId = "00000000-0000-0000-0000-000000000000";
+    // Check if user has admin role
+    if (!locals.user.roles.includes("admin")) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden", message: "Admin access required" }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
     // Get configuration from environment
     const importDir = import.meta.env.IMPORT_DIR;
@@ -58,7 +56,7 @@ export const POST: APIRoute = async ({ locals }) => {
       getSupabaseAdminClient(),
       importDir,
       encryptionKey,
-      mockAdminId
+      locals.user.id
     );
 
     return new Response(JSON.stringify(result), {

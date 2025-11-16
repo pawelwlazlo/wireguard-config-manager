@@ -11,19 +11,21 @@ export const prerender = false;
 
 export const GET: APIRoute = async ({ locals }) => {
   try {
-    // TODO: Check if user is authenticated and is admin (when auth is implemented)
-    // if (!locals.user) {
-    //   return new Response(
-    //     JSON.stringify({ error: "Unauthorized", message: "Authentication required" }),
-    //     { status: 401, headers: { "Content-Type": "application/json" } }
-    //   );
-    // }
-    // if (!locals.user.roles.includes("admin")) {
-    //   return new Response(
-    //     JSON.stringify({ error: "Forbidden", message: "Admin access required" }),
-    //     { status: 403, headers: { "Content-Type": "application/json" } }
-    //   );
-    // }
+    // Check if user is authenticated
+    if (!locals.user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", message: "Authentication required" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if user has admin role
+    if (!locals.user.roles.includes("admin")) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden", message: "Admin access required" }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
     // Get all configuration using admin client (bypasses RLS)
     const config = await getAllConfig(getSupabaseAdminClient());
