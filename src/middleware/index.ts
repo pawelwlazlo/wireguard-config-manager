@@ -14,7 +14,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   // Initialize Supabase client in locals for all requests (lazy initialization)
-  const supabase = getSupabaseClient();
+  let supabase;
+  try {
+    supabase = getSupabaseClient();
+  } catch (error) {
+    // If Supabase initialization fails (e.g., missing env vars during build), skip auth
+    console.warn("Supabase client initialization failed, skipping auth middleware:", error);
+    return next();
+  }
   context.locals.supabase = supabase;
 
   // Extract JWT token from cookie or Authorization header
