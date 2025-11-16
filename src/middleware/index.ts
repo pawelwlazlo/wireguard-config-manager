@@ -4,7 +4,7 @@
  */
 
 import { defineMiddleware } from "astro:middleware";
-import { getSupabaseClient } from "@/db/supabase.client";
+import { getSupabaseClient, getSupabaseAdminClient } from "@/db/supabase.client";
 import { getProfile } from "@/lib/services/userService";
 
 export const onRequest = defineMiddleware(async (context, next) => {
@@ -24,7 +24,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
       if (!error && data.user) {
         // Fetch full user profile with roles from our database
-        const userProfile = await getProfile(supabase, data.user.id);
+        // Use admin client to bypass RLS (avoid infinite recursion in user_roles policy)
+        const adminClient = getSupabaseAdminClient();
+        const userProfile = await getProfile(adminClient, data.user.id);
 
         if (userProfile) {
           context.locals.user = userProfile;
