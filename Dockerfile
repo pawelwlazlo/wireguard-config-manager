@@ -16,12 +16,12 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 # Accept build arguments for Supabase configuration
-ARG PUBLIC_SUPABASE_URL
-ARG PUBLIC_SUPABASE_ANON_KEY
+ARG SUPABASE_URL
+ARG SUPABASE_ANON_KEY
 
 # Set environment variables for build
-ENV PUBLIC_SUPABASE_URL=$PUBLIC_SUPABASE_URL
-ENV PUBLIC_SUPABASE_ANON_KEY=$PUBLIC_SUPABASE_ANON_KEY
+ENV SUPABASE_URL=$SUPABASE_URL
+ENV SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
 
 # Build the application
 RUN pnpm run build

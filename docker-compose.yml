@@ -4,8 +4,8 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        PUBLIC_SUPABASE_URL: ${PUBLIC_SUPABASE_URL}
-        PUBLIC_SUPABASE_ANON_KEY: ${PUBLIC_SUPABASE_ANON_KEY}
+        SUPABASE_URL: ${SUPABASE_URL}
+        SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
     container_name: wireguard-config-manager
     ports:
       - "4321:4321"

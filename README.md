@@ -171,11 +171,11 @@ The application can be deployed to a VPS using Docker and GitHub Actions for aut
    ```env
    # Supabase Configuration (required for both build and runtime)
    # If using local Supabase (supabase start), use internal Docker network name:
-   PUBLIC_SUPABASE_URL=http://supabase_kong_wireguard-config-manager:8000
+   SUPABASE_URL=http://supabase_kong_wireguard-config-manager:8000
    # If using Supabase Cloud, use public URL:
-   # PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+   # SUPABASE_URL=https://your-project.supabase.co
    
-   PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+   SUPABASE_ANON_KEY=your_anon_key
    SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
    
    # Application Configuration
@@ -186,7 +186,7 @@ The application can be deployed to a VPS using Docker and GitHub Actions for aut
    ```
    
    **Important Notes**:
-   - The `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_ANON_KEY` variables are required during Docker build process for pre-rendering static pages.
+   - The `SUPABASE_URL` and `SUPABASE_ANON_KEY` variables are required during Docker build process for pre-rendering static pages.
    - If using **local Supabase** (`supabase start`), use the internal Docker container name (e.g., `http://supabase_kong_wireguard-config-manager:8000`). Check your Kong container name with `docker ps | grep kong`.
    - If using **Supabase Cloud**, use the public HTTPS URL provided by Supabase.
    - The application connects to Supabase through the `supabase_network_wireguard-config-manager` Docker network (configured in `docker-compose.yml`).
