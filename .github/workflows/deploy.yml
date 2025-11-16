@@ -128,26 +128,26 @@ jobs:
             
             # Stop old process if running
             pkill -f "node.*dist/server/entry.mjs" || true
-            sleep 1
+            sleep 2
             
-            # Start application in background (detached from SSH session)
-            nohup node dist/server/entry.mjs > app.log 2>&1 < /dev/null &
-            APP_PID=$!
-            disown
+            # Start application in background (fully detached from SSH)
+            # Use setsid to create new session and prevent SIGHUP on SSH disconnect
+            setsid nohup node dist/server/entry.mjs > app.log 2>&1 < /dev/null &
             
             # Give it a moment to start
             sleep 3
             
-            # Check if application started successfully
-            if ps -p $APP_PID > /dev/null 2>&1; then
+            # Check if application is running
+            if pgrep -f "node.*dist/server/entry.mjs" > /dev/null; then
               echo "✓ Deployment completed successfully!"
-              echo "✓ Application is running on port 4321 (PID: $APP_PID)"
+              echo "✓ Application is running on port 4321"
               echo "✓ View logs: tail -f $DEPLOY_PATH/app.log"
-              exit 0
             else
-              echo "⚠ Application process started but may have exited"
+              echo "⚠ Application may not have started"
               echo "Check logs at: $DEPLOY_PATH/app.log"
-              # Don't fail - process may have forked
-              exit 0
             fi
+            
+            # Always exit with success (app runs in background)
+            echo "✓ Deployment process finished"
+            exit 0
 
