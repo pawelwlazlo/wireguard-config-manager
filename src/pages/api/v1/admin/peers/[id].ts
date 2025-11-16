@@ -45,7 +45,7 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
     const peerId = parseResult.data;
 
     // Revoke peer using admin client to bypass RLS
-    await revokePeer(getSupabaseAdminClient(), peerId);
+    await revokePeer(getSupabaseAdminClient(), peerId, locals.user.id);
 
     // Return 204 No Content
     return new Response(null, { status: 204 });

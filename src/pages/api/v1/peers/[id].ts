@@ -224,7 +224,7 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
       : locals.supabase;
 
     // Revoke peer
-    await revokePeer(client, peerId);
+    await revokePeer(client, peerId, locals.user.id);
 
     // Return 204 No Content
     return new Response(null, { status: 204 });

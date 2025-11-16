@@ -6,6 +6,7 @@
 import type { SupabaseClient } from "@/db/supabase.client";
 import type { Tables } from "@/db/database.types";
 import type { PeerDto, PeerStatus, PeerRowVM } from "@/types";
+import { logAudit } from "./auditService";
 
 type PeerRow = Tables<{ schema: "app" }, "peers">;
 
@@ -177,6 +178,12 @@ export async function claimNextPeer(
     throw new Error("Failed to claim peer");
   }
 
+  // Log audit event
+  await logAudit(supabase, "PEER_CLAIM", userId, "peers", data.id, {
+    peer_id: data.id,
+    public_key: data.public_key,
+  });
+
   return mapToPeerDto(data);
 }
 
@@ -219,8 +226,17 @@ export async function updatePeerFriendlyName(
  */
 export async function revokePeer(
   supabase: SupabaseClient,
-  peerId: string
+  peerId: string,
+  actorId: string
 ): Promise<void> {
+  // Get peer data before revoking for audit log
+  const { data: peerData } = await supabase
+    .schema("app")
+    .from("peers")
+    .select("id, public_key, owner_id")
+    .eq("id", peerId)
+    .single();
+
   // Update peer status to inactive
   const { error } = await supabase
     .schema("app")
@@ -237,6 +253,15 @@ export async function revokePeer(
       throw new Error("NotFound");
     }
     throw new Error(`Failed to revoke peer: ${error.message}`);
+  }
+
+  // Log audit event
+  if (peerData) {
+    await logAudit(supabase, "PEER_REVOKE", actorId, "peers", peerId, {
+      peer_id: peerId,
+      public_key: peerData.public_key,
+      owner_id: peerData.owner_id,
+    });
   }
 }
 
@@ -332,6 +357,29 @@ export async function assignPeerToUser(
   }
 
   return mapToPeerDto(data);
+}
+
+/**
+ * Assign peer to user with audit logging (admin only)
+ * Wrapper around assignPeerToUser that logs the audit event
+ * Note: Authorization check should be done in the endpoint handler
+ */
+export async function assignPeerToUserWithAudit(
+  supabase: SupabaseClient,
+  peerId: string,
+  targetUserId: string,
+  adminId: string
+): Promise<PeerDto> {
+  const peer = await assignPeerToUser(supabase, peerId, targetUserId);
+
+  // Log audit event
+  await logAudit(supabase, "PEER_ASSIGN", adminId, "peers", peerId, {
+    peer_id: peerId,
+    target_user_id: targetUserId,
+    public_key: peer.public_key,
+  });
+
+  return peer;
 }
 
 /**

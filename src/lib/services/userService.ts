@@ -6,6 +6,7 @@
 import type { SupabaseClient } from "@/db/supabase.client";
 import type { Tables } from "@/db/database.types";
 import type { UserDto, UserStatus, RoleName } from "@/types";
+import { logAudit } from "./auditService";
 
 type UserRow = Tables<{ schema: "app" }, "users">;
 type RoleRow = Tables<{ schema: "app" }, "roles">;
@@ -249,6 +250,22 @@ export async function updateUser(
       new_limit: updates.peer_limit,
       changed_by: adminId,
     });
+
+    // Log audit event for limit change
+    await logAudit(supabase, "LIMIT_CHANGE", adminId, "users", userId, {
+      old_limit: currentUser.peer_limit,
+      new_limit: updates.peer_limit,
+      user_email: currentUser.email,
+    });
+  }
+
+  // Log audit event if status changed to inactive
+  if (updates.status === "inactive" && currentUser.status !== "inactive") {
+    await logAudit(supabase, "USER_DEACTIVATE", adminId, "users", userId, {
+      user_email: currentUser.email,
+      old_status: currentUser.status,
+      new_status: updates.status,
+    });
   }
 
   // Update user
@@ -367,6 +384,12 @@ export async function resetUserPassword(
     console.error("Error setting requires_password_change flag:", updateFlagError);
     // Don't fail the entire operation if this update fails
   }
+
+  // Log audit event
+  await logAudit(supabase, "RESET_PASSWORD", adminId, "users", userId, {
+    user_email: user.email,
+    reset_by_admin: adminId,
+  });
 
   return temporaryPassword;
 }

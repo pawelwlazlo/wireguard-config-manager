@@ -7,6 +7,7 @@ import type { SupabaseClient } from "@/db/supabase.client";
 import { getSupabaseAdminClient } from "@/db/supabase.client";
 import type { Tables } from "@/db/database.types";
 import type { UserDto, RoleName, AuthResponse } from "@/types";
+import { logAudit } from "./auditService";
 
 type UserRow = Tables<{ schema: "app" }, "users">;
 type RoleRow = Tables<{ schema: "app" }, "roles">;
@@ -104,7 +105,7 @@ async function getUserProfile(
 }
 
 /**
- * Log audit event
+ * Log audit event for auth-related operations
  */
 async function logAuditEvent(
   supabase: SupabaseClient,
@@ -112,13 +113,7 @@ async function logAuditEvent(
   actorId: string,
   metadata?: Record<string, unknown>
 ): Promise<void> {
-  await supabase.schema("app").from("audit_log").insert({
-    event_type: eventType,
-    actor_id: actorId,
-    subject_table: "users",
-    subject_id: actorId,
-    metadata: (metadata || {}) as never,
-  });
+  await logAudit(supabase, eventType, actorId, "users", actorId, metadata);
 }
 
 /**

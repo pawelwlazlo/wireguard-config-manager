@@ -7,6 +7,7 @@ import type { APIRoute } from "astro";
 import { z } from "zod";
 import { getPeerConfig } from "@/lib/services/peerService";
 import { getSupabaseAdminClient } from "@/db/supabase.client";
+import { logAudit } from "@/lib/services/auditService";
 
 export const prerender = false;
 
@@ -60,6 +61,13 @@ export const GET: APIRoute = async ({ params, locals }) => {
     const filename = peerConfig.friendly_name
       ? `${peerConfig.friendly_name}.conf`
       : `peer-${peerId.substring(0, 8)}.conf`;
+
+    // Log audit event
+    await logAudit(client, "PEER_DOWNLOAD", locals.user.id, "peers", peerId, {
+      peer_id: peerId,
+      public_key: peerConfig.public_key,
+      filename,
+    });
 
     // Return file with appropriate headers
     return new Response(configContent, {

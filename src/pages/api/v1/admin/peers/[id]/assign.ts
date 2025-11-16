@@ -5,7 +5,7 @@
 
 import type { APIRoute } from "astro";
 import { z } from "zod";
-import { assignPeerToUser } from "@/lib/services/peerService";
+import { assignPeerToUserWithAudit } from "@/lib/services/peerService";
 import { getSupabaseAdminClient } from "@/db/supabase.client";
 
 export const prerender = false;
@@ -76,8 +76,13 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 
     const { user_id } = bodyParseResult.data;
 
-    // Assign peer to user using admin client to bypass RLS
-    const peer = await assignPeerToUser(getSupabaseAdminClient(), peerId, user_id);
+    // Assign peer to user using admin client to bypass RLS (with audit logging)
+    const peer = await assignPeerToUserWithAudit(
+      getSupabaseAdminClient(),
+      peerId,
+      user_id,
+      locals.user.id
+    );
 
     // Return assigned peer
     return new Response(JSON.stringify(peer), {

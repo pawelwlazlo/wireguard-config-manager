@@ -10,6 +10,31 @@ import type { AuditDto, AuditEvent, Page } from "@/types";
 type AuditRow = Tables<{ schema: "app" }, "audit_log">;
 
 /**
+ * Log an audit event
+ * Used throughout the application to track user and system actions
+ */
+export async function logAudit(
+  supabase: SupabaseClient,
+  eventType: AuditEvent,
+  actorId: string | null,
+  subjectTable: string,
+  subjectId: string | null,
+  metadata?: Record<string, unknown>
+): Promise<void> {
+  const { error } = await supabase.schema("app").from("audit_log").insert({
+    event_type: eventType,
+    actor_id: actorId,
+    subject_table: subjectTable,
+    subject_id: subjectId,
+    metadata: (metadata || {}) as never,
+  });
+
+  if (error) {
+    console.error("Failed to create audit log:", error);
+  }
+}
+
+/**
  * Map database row to AuditDto
  */
 function mapToAuditDto(
