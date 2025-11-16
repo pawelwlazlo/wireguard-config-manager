@@ -114,6 +114,49 @@ All commands should be run from the root of the project:
 | `npm run astro` | Run Astro CLI commands (e.g., `npm run astro add`, `npm run astro check`) |
 | `npm run lint` | Run ESLint to check code quality |
 | `npm run lint:fix` | Run ESLint and automatically fix issues |
+| `npm run test:e2e` | Run all E2E tests with Playwright |
+| `npm run test:e2e:ui` | Run E2E tests in interactive UI mode |
+| `npm run test:e2e:debug` | Run E2E tests in debug mode |
+| `npm run test:e2e:report` | Show the last test report |
+
+## Application Routes
+
+### Public Routes
+
+| Route | Description |
+|-------|-------------|
+| `/` | Home page |
+| `/login` | User login page with email and password authentication |
+| `/register` | User registration page (domain-restricted) |
+
+### API Endpoints
+
+#### Authentication
+- `POST /api/v1/auth/login` - User login
+- `POST /api/v1/auth/logout` - User logout
+- `POST /api/v1/auth/register` - User registration
+
+#### User Endpoints
+- `GET /api/v1/users/me` - Get current user profile
+
+#### Peer Endpoints (User)
+- `GET /api/v1/peers` - List user's peers
+- `GET /api/v1/peers/:id` - Get specific peer details
+- `POST /api/v1/peers/claim` - Claim next available peer (FIFO)
+- `GET /api/v1/peers/:id/download` - Download peer configuration file
+- `DELETE /api/v1/peers/:id` - Revoke a peer
+
+#### Admin Endpoints
+- `GET /api/v1/admin/users` - List all users (paginated)
+- `GET /api/v1/admin/users/:id` - Get user details
+- `PATCH /api/v1/admin/users/:id` - Update user (status, peer_limit)
+- `POST /api/v1/admin/users/:id/reset-password` - Reset user password
+- `GET /api/v1/admin/peers` - List all peers (paginated, filterable)
+- `GET /api/v1/admin/peers/:id` - Get peer details
+- `POST /api/v1/admin/peers/:id/assign` - Manually assign peer to user
+- `POST /api/v1/admin/import` - Import WireGuard configs from directory
+- `GET /api/v1/admin/config` - Get system configuration
+- `GET /api/v1/admin/audit` - Get audit log (paginated, filterable)
 
 ## Project Scope
 

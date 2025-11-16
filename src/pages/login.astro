@@ -1,0 +1,19 @@
+---
+/**
+ * Login page
+ * Displays login form for user authentication
+ */
+
+import Layout from "@/layouts/Layout.astro";
+import { LoginForm } from "@/components/LoginForm";
+
+// Prevent prerendering for this page
+export const prerender = false;
+---
+
+<Layout title="Logowanie - WireGuard Config Manager">
+  <main class="flex min-h-screen items-center justify-center p-4">
+    <LoginForm client:load />
+  </main>
+</Layout>
+

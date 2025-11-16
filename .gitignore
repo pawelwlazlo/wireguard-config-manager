@@ -25,3 +25,8 @@ pnpm-debug.log*
 
 # test outputs
 /tmp/wireguard-test-*.conf
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
