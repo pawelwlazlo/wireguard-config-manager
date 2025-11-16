@@ -12,6 +12,11 @@ if (Astro.locals.user.requires_password_change) {
 	return Astro.redirect('/change-password');
 }
 
+// Redirect admins to admin panel
+if (Astro.locals.user.roles.includes('admin')) {
+	return Astro.redirect('/admin/peers');
+}
+
 export const prerender = false;
 ---
 

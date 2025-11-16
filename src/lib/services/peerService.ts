@@ -5,7 +5,7 @@
 
 import type { SupabaseClient } from "@/db/supabase.client";
 import type { Tables } from "@/db/database.types";
-import type { PeerDto, PeerStatus } from "@/types";
+import type { PeerDto, PeerStatus, PeerRowVM } from "@/types";
 
 type PeerRow = Tables<{ schema: "app" }, "peers">;
 
@@ -347,7 +347,7 @@ export async function getPeersAdmin(
     size?: number;
   }
 ): Promise<{
-  items: PeerDto[];
+  items: PeerRowVM[];
   total: number;
   page: number;
   size: number;
@@ -360,7 +360,7 @@ export async function getPeersAdmin(
     .schema("app")
     .from("peers")
     .select(
-      "id, public_key, status, friendly_name, claimed_at, revoked_at",
+      "id, public_key, status, friendly_name, claimed_at, revoked_at, owner_id, users!peers_owner_id_fkey(email)",
       { count: "exact" }
     )
     .order("imported_at", { ascending: false });
@@ -383,8 +383,20 @@ export async function getPeersAdmin(
     throw new Error(`Failed to fetch peers: ${error.message}`);
   }
 
+  // Map to PeerRowVM with owner information
+  const items: PeerRowVM[] = (data || []).map((row: any) => ({
+    id: row.id,
+    public_key: row.public_key,
+    status: row.status,
+    friendly_name: row.friendly_name,
+    claimed_at: row.claimed_at,
+    revoked_at: row.revoked_at,
+    owner_id: row.owner_id,
+    owner_email: row.users?.email || null,
+  }));
+
   return {
-    items: (data || []).map(mapToPeerDto),
+    items,
     total: count || 0,
     page,
     size,

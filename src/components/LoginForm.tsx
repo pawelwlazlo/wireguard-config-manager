@@ -87,8 +87,13 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       if (onSuccess) {
         onSuccess(authResponse);
       } else {
-        // Redirect to home page - JWT cookie will be sent automatically
-        window.location.href = "/";
+        // Redirect based on user role
+        // Admins go to /admin/peers, regular users to dashboard
+        if (authResponse.user.roles.includes("admin")) {
+          window.location.href = "/admin/peers";
+        } else {
+          window.location.href = "/";
+        }
       }
     } catch (error) {
       console.error("Login error:", error);

@@ -118,6 +118,7 @@ export function useDashboard() {
     ...actions,
     claimedCount: state.peers.length,
     peerLimit: state.user?.peer_limit ?? 0,
+    user: state.user,
   };
 }
 

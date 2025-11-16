@@ -3,6 +3,7 @@
  */
 
 import { useState } from "react";
+import { Navigation } from "@/components/Navigation";
 import { useDashboard } from "@/components/hooks/useDashboard";
 import { StatsCard } from "@/components/StatsCard";
 import { ClaimPeerButton } from "@/components/ClaimPeerButton";
@@ -13,6 +14,7 @@ import type { PeerDto } from "@/types";
 
 export function Dashboard() {
   const {
+    user,
     peers,
     loading,
     error,
@@ -144,9 +146,11 @@ export function Dashboard() {
   const isAtLimit = claimedCount >= peerLimit;
 
   return (
-    <main className="container mx-auto max-w-7xl px-4 py-8">
-      {/* Toast Notification */}
-      {toast && (
+    <>
+      <Navigation user={user} />
+      <main className="container mx-auto max-w-7xl px-4 py-8">
+        {/* Toast Notification */}
+        {toast && (
         <div
           role="alert"
           aria-live="polite"
@@ -206,13 +210,14 @@ export function Dashboard() {
         )}
       </section>
 
-      {/* Peer Details Modal */}
-      <PeerDetailsModal
-        peer={selectedPeer}
-        onClose={() => setSelectedPeer(null)}
-        onSave={handlePeerSave}
-      />
-    </main>
+        {/* Peer Details Modal */}
+        <PeerDetailsModal
+          peer={selectedPeer}
+          onClose={() => setSelectedPeer(null)}
+          onSave={handlePeerSave}
+        />
+      </main>
+    </>
   );
 }
 

@@ -6,7 +6,7 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { getPeersAdmin } from "@/lib/services/peerService";
-import type { Page, PeerDto } from "@/types";
+import type { Page, PeerRowVM } from "@/types";
 import { getSupabaseAdminClient } from "@/db/supabase.client";
 
 export const prerender = false;
@@ -61,8 +61,8 @@ export const GET: APIRoute = async ({ url, locals }) => {
       size,
     });
 
-    // Build Page<PeerDto> response
-    const response: Page<PeerDto> = {
+    // Build Page<PeerRowVM> response
+    const response: Page<PeerRowVM> = {
       items: result.items,
       page: result.page,
       size: result.size,
