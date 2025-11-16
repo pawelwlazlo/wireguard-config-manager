@@ -122,6 +122,229 @@ All commands should be run from the root of the project:
 | `npm run test:e2e:debug` | Run E2E tests in debug mode |
 | `npm run test:e2e:report` | Show the last test report |
 
+## Deployment
+
+The application can be deployed to a VPS using Docker and GitHub Actions for automated CI/CD.
+
+### Prerequisites
+
+#### On VPS
+- **Docker**: Version 20.10 or higher
+- **Docker Compose**: Version 2.0 or higher
+- **SSH Access**: SSH key-based authentication configured
+- **Operating System**: Linux (Ubuntu 20.04+ recommended)
+
+#### On GitHub
+- Repository with admin access to configure secrets
+- SSH private key for VPS access
+
+### VPS Setup
+
+1. **Install Docker and Docker Compose** (if not already installed)
+   ```bash
+   # Update package index
+   sudo apt-get update
+   
+   # Install Docker
+   curl -fsSL https://get.docker.com -o get-docker.sh
+   sudo sh get-docker.sh
+   
+   # Install Docker Compose
+   sudo apt-get install docker-compose-plugin
+   
+   # Add your user to docker group (optional, to run without sudo)
+   sudo usermod -aG docker $USER
+   ```
+
+2. **Create application directory structure**
+   ```bash
+   mkdir -p /home/ubuntu/docker/wireguard-config-manager/env
+   cd /home/ubuntu/docker/wireguard-config-manager
+   ```
+
+3. **Create environment file**
+   ```bash
+   nano env/.env
+   ```
+   
+   Add your environment variables (use `env.example` as reference):
+   ```env
+   # Supabase Configuration
+   PUBLIC_SUPABASE_URL=your_supabase_url
+   PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+   
+   # Application Configuration
+   IMPORT_DIR=/path/to/wireguard/configs
+   ENCRYPTION_KEY=your_encryption_key_here
+   
+   # Add other required variables from env.example
+   ```
+
+### GitHub Configuration
+
+Configure the following secrets in your GitHub repository (Settings → Secrets and variables → Actions → New repository secret):
+
+| Secret Name | Description | Example |
+|-------------|-------------|---------|
+| `VPS_HOST` | IP address or domain of your VPS | `192.168.1.100` or `vps.example.com` |
+| `VPS_USER` | SSH username on VPS | `ubuntu` |
+| `VPS_SSH_KEY` | Private SSH key for authentication | Full content of your private key file |
+| `VPS_PATH` | Deployment path on VPS | `/home/ubuntu/docker/wireguard-config-manager` |
+
+#### How to add VPS_SSH_KEY
+
+1. On your local machine, generate an SSH key pair (if not already done):
+   ```bash
+   ssh-keygen -t ed25519 -C "github-actions-deploy"
+   ```
+
+2. Copy the public key to your VPS:
+   ```bash
+   ssh-copy-id -i ~/.ssh/id_ed25519.pub ubuntu@your-vps-ip
+   ```
+
+3. Copy the **private key** content and add it as `VPS_SSH_KEY` secret in GitHub:
+   ```bash
+   cat ~/.ssh/id_ed25519
+   ```
+
+### Running a Deployment
+
+The deployment is triggered manually from GitHub Actions:
+
+1. Navigate to your repository on GitHub
+2. Click on **Actions** tab
+3. Select **Deploy to VPS** workflow
+4. Click **Run workflow** button
+5. Select the branch to deploy (default: `main`)
+6. Click **Run workflow**
+
+The workflow will:
+- ✅ Checkout the code
+- ✅ Create a deployment archive
+- ✅ Copy files to VPS via SCP
+- ✅ SSH into VPS and execute deployment commands
+- ✅ Build Docker image
+- ✅ Stop old containers
+- ✅ Start new containers
+- ✅ Clean up old Docker images
+
+### Accessing the Application
+
+After successful deployment, the application will be available at:
+```
+http://YOUR_VPS_IP:4321
+```
+
+### Verifying Deployment
+
+SSH into your VPS and check container status:
+
+```bash
+cd /home/ubuntu/docker/wireguard-config-manager
+docker-compose ps
+```
+
+Expected output:
+```
+NAME                          COMMAND                  SERVICE             STATUS              PORTS
+wireguard-config-manager      "node ./dist/server/…"   wireguard-manager   Up 2 minutes        0.0.0.0:4321->4321/tcp
+```
+
+View container logs:
+```bash
+docker-compose logs -f wireguard-manager
+```
+
+### Troubleshooting
+
+#### Container won't start
+
+Check logs for errors:
+```bash
+docker-compose logs wireguard-manager
+```
+
+Common issues:
+- **Missing environment variables**: Verify `env/.env` file exists and contains all required variables
+- **Port conflict**: Ensure port 4321 is not already in use (`sudo lsof -i :4321`)
+- **Permission issues**: Ensure Docker has permission to read files
+
+#### Deployment fails
+
+Check GitHub Actions logs for specific error messages.
+
+Common issues:
+- **SSH connection failed**: Verify `VPS_HOST`, `VPS_USER`, and `VPS_SSH_KEY` secrets are correctly configured
+- **Permission denied**: Ensure the SSH key has proper permissions on VPS
+- **Path not found**: Verify `VPS_PATH` secret matches the actual directory on VPS
+
+#### Application returns errors
+
+1. Check environment variables in `env/.env`
+2. Verify Supabase connection details
+3. Ensure database migrations have been run
+4. Check application logs: `docker-compose logs -f`
+
+### Manual Deployment (Alternative)
+
+If you prefer to deploy manually without GitHub Actions:
+
+1. **On your local machine:**
+   ```bash
+   # Build the project
+   npm run build
+   
+   # Create archive (excluding unnecessary files)
+   tar --exclude='.git' --exclude='node_modules' --exclude='tests' -czf deploy.tar.gz .
+   
+   # Copy to VPS
+   scp deploy.tar.gz ubuntu@your-vps:/home/ubuntu/docker/wireguard-config-manager/
+   ```
+
+2. **On the VPS:**
+   ```bash
+   cd /home/ubuntu/docker/wireguard-config-manager
+   tar -xzf deploy.tar.gz
+   rm deploy.tar.gz
+   
+   # Build and start containers
+   docker-compose down
+   docker-compose up --build -d
+   
+   # View logs
+   docker-compose logs -f
+   ```
+
+### Updating the Application
+
+To update a running deployment:
+
+1. Run the deployment workflow from GitHub Actions (as described above)
+2. The workflow automatically:
+   - Creates a backup of current deployment
+   - Deploys new version
+   - Restarts containers
+
+### Rolling Back
+
+If a deployment fails, you can rollback to the previous version:
+
+```bash
+# SSH into VPS
+cd /home/ubuntu/docker/wireguard-config-manager
+
+# Stop current containers
+docker-compose down
+
+# Restore from backup
+rsync -a --delete backup/ ./
+
+# Start containers with previous version
+docker-compose up -d
+```
+
 ## Application Routes
 
 ### Public Routes
