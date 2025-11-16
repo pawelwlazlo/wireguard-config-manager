@@ -21,6 +21,14 @@ Migrations are executed in chronological order based on their timestamp prefix:
    - Enables tracking which import batch each peer came from
    - Creates index for performance optimization
 
+4. **`20251115130000_grant_schema_permissions.sql`**
+   - Grants necessary permissions on app schema to authenticated users
+
+5. **`20251116000000_add_audit_log_created_at_index.sql`**
+   - Adds index for `created_at DESC` on `audit_log` table
+   - Optimizes default sorting in audit log queries
+   - Supports GET /api/v1/admin/audit endpoint performance
+
 ## Running Migrations
 
 ### Using Supabase CLI (Recommended)
@@ -47,6 +55,8 @@ If you prefer to run migrations manually:
    \i supabase/migrations/20241219120000_initial_schema.sql
    \i supabase/migrations/20241219120100_sync_auth_users.sql
    \i supabase/migrations/20251115120000_add_import_batch_id_to_peers.sql
+   \i supabase/migrations/20251115130000_grant_schema_permissions.sql
+   \i supabase/migrations/20251116000000_add_audit_log_created_at_index.sql
    ```
 
 3. **Verify migration success**:
