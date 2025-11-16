@@ -76,6 +76,16 @@ jobs:
               rm -rf "$DEPLOY_PATH/backup"
             fi
             
+            # Verify .env file exists BEFORE deployment
+            if [ ! -f "$DEPLOY_PATH/.env" ]; then
+              echo "ERROR: .env file not found in $DEPLOY_PATH"
+              echo "Please create .env file with required environment variables before deployment"
+              exit 1
+            fi
+            
+            # Backup .env to preserve it
+            cp "$DEPLOY_PATH/.env" "/tmp/.env.backup"
+            
             # Create backup of current files (except .env file)
             if [ -f "$DEPLOY_PATH/docker-compose.yml" ]; then
               mkdir -p "$DEPLOY_PATH/backup"
@@ -87,12 +97,9 @@ jobs:
             tar -xzf /tmp/deployment.tar.gz
             rm /tmp/deployment.tar.gz
             
-            # Verify .env file exists
-            if [ ! -f "$DEPLOY_PATH/.env" ]; then
-              echo "ERROR: .env file not found in $DEPLOY_PATH"
-              echo "Please create .env file with required environment variables before deployment"
-              exit 1
-            fi
+            # Restore .env file (in case tar overwrote anything)
+            cp "/tmp/.env.backup" "$DEPLOY_PATH/.env"
+            rm "/tmp/.env.backup"
             
             # Stop and remove old containers
             docker compose down || true
