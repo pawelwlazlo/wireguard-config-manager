@@ -5,7 +5,7 @@
 
 import type { APIRoute } from "astro";
 import { importConfigs } from "@/lib/services/importService";
-import { supabaseAdminClient } from "@/db/supabase.client";
+import { getSupabaseAdminClient } from "@/db/supabase.client";
 
 export const prerender = false;
 
@@ -55,7 +55,7 @@ export const POST: APIRoute = async ({ locals }) => {
 
     // Perform import using admin client (bypasses RLS)
     const result = await importConfigs(
-      supabaseAdminClient,
+      getSupabaseAdminClient(),
       importDir,
       encryptionKey,
       mockAdminId

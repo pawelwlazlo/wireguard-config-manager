@@ -5,6 +5,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@/db/supabase.client";
+import { getSupabaseAdminClient } from "@/db/supabase.client";
 import type { Database, Tables } from "@/db/database.types";
 import type { UserDto, RoleName, AuthResponse } from "@/types";
 
@@ -50,10 +51,12 @@ async function getAcceptedDomains(supabase: SupabaseClient): Promise<string[]> {
 
   // Return cached value if still valid
   if (acceptedDomainsCache && now - acceptedDomainsCacheTime < CACHE_TTL) {
+    console.log("[AUTH] Using cached accepted domains:", acceptedDomainsCache);
     return acceptedDomainsCache;
   }
 
   // Fetch from database
+  console.log("[AUTH] Fetching accepted domains from database...");
   const { data, error } = await supabase
     .schema("app")
     .from("accepted_domains")
@@ -68,6 +71,7 @@ async function getAcceptedDomains(supabase: SupabaseClient): Promise<string[]> {
   acceptedDomainsCache = (data || []).map((row) => row.domain);
   acceptedDomainsCacheTime = now;
 
+  console.log("[AUTH] Fetched and cached accepted domains:", acceptedDomainsCache);
   return acceptedDomainsCache;
 }
 
@@ -79,12 +83,18 @@ export async function validateEmailDomain(
   email: string
 ): Promise<boolean> {
   const domain = email.split("@")[1];
+  console.log("[AUTH] Validating email domain:", { email, domain });
+  
   if (!domain) {
+    console.log("[AUTH] No domain found in email");
     return false;
   }
 
   const acceptedDomains = await getAcceptedDomains(supabase);
-  return acceptedDomains.includes(domain);
+  const isValid = acceptedDomains.includes(domain);
+  
+  console.log("[AUTH] Domain validation result:", { domain, acceptedDomains, isValid });
+  return isValid;
 }
 
 /**
@@ -113,6 +123,7 @@ async function getUserProfile(
   userId: string
 ): Promise<UserDto | null> {
   // Get user data
+  console.log("[AUTH] getUserProfile: Fetching user from app.users for userId:", userId);
   const { data: user, error: userError } = await supabase
     .schema("app")
     .from("users")
@@ -120,11 +131,20 @@ async function getUserProfile(
     .eq("id", userId)
     .single();
 
-  if (userError || !user) {
+  if (userError) {
+    console.error("[AUTH] getUserProfile: Error fetching user:", userError);
+    return null;
+  }
+  
+  if (!user) {
+    console.error("[AUTH] getUserProfile: User not found in app.users");
     return null;
   }
 
+  console.log("[AUTH] getUserProfile: User found:", user);
+
   // Get user roles
+  console.log("[AUTH] getUserProfile: Fetching roles for userId:", userId);
   const { data: userRoles, error: rolesError } = await supabase
     .schema("app")
     .from("user_roles")
@@ -132,14 +152,18 @@ async function getUserProfile(
     .eq("user_id", userId);
 
   if (rolesError) {
+    console.error("[AUTH] getUserProfile: Error fetching roles:", rolesError);
     return null;
   }
+
+  console.log("[AUTH] getUserProfile: User roles found:", userRoles);
 
   // Extract role names from the join result
   const roles: RoleName[] = (userRoles || []).map(
     (ur) => (ur.roles as unknown as RoleRow).name
   );
 
+  console.log("[AUTH] getUserProfile: Mapped roles:", roles);
   return mapToUserDto(user, roles);
 }
 
@@ -188,7 +212,9 @@ export async function registerUser(
   }
 
   // Check if this will be the first user (for admin role assignment)
-  const { count: userCount, error: countError } = await supabase
+  // Use admin client to bypass RLS
+  const adminClient = getSupabaseAdminClient();
+  const { count: userCount, error: countError } = await adminClient
     .schema("app")
     .from("users")
     .select("*", { count: "exact", head: true });
@@ -199,8 +225,10 @@ export async function registerUser(
   }
 
   const isFirstUser = (userCount || 0) === 0;
+  console.log("[AUTH] User count check:", { userCount, isFirstUser });
 
   // Register with Supabase Auth
+  console.log("[AUTH] Attempting Supabase auth signup for:", email);
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
@@ -215,25 +243,34 @@ export async function registerUser(
     if (authError.message.includes("password")) {
       throw new Error("WeakPassword");
     }
-    console.error("Supabase auth signup error:", authError);
+    console.error("[AUTH] Supabase auth signup error:", authError);
     throw new Error("AuthError");
   }
 
+  console.log("[AUTH] Supabase signup response:", {
+    hasUser: !!authData.user,
+    userId: authData.user?.id,
+    hasSession: !!authData.session,
+    userEmail: authData.user?.email,
+    emailConfirmedAt: authData.user?.email_confirmed_at,
+  });
+
   if (!authData.user || !authData.session) {
+    console.error("[AUTH] Missing user or session after signup!");
     throw new Error("AuthError");
   }
 
   const userId = authData.user.id;
   const jwt = authData.session.access_token;
 
-  // Create authenticated client for RLS-protected operations
-  const authenticatedClient = createAuthenticatedClient(jwt);
-
   // Assign role to user (admin if first user, otherwise regular user)
   // Note: The sync_user_from_auth trigger has already created the user record
+  // Use admin client to bypass RLS for role assignment (administrative operation)
+  console.log("[AUTH] Assigning role. IsFirstUser:", isFirstUser);
   const roleName = isFirstUser ? "admin" : "user";
 
-  const { data: roleData, error: roleError } = await authenticatedClient
+  console.log("[AUTH] Fetching role:", roleName);
+  const { data: roleData, error: roleError } = await adminClient
     .schema("app")
     .from("roles")
     .select("id")
@@ -241,11 +278,13 @@ export async function registerUser(
     .single();
 
   if (roleError || !roleData) {
-    console.error("Error fetching role:", roleError);
+    console.error("[AUTH] Error fetching role:", roleError);
     throw new Error("AuthError");
   }
+  console.log("[AUTH] Role fetched:", roleData);
 
-  const { error: assignRoleError } = await authenticatedClient
+  console.log("[AUTH] Inserting user_role for userId:", userId, "roleId:", roleData.id);
+  const { error: assignRoleError } = await adminClient
     .schema("app")
     .from("user_roles")
     .insert({
@@ -254,15 +293,20 @@ export async function registerUser(
     });
 
   if (assignRoleError) {
-    console.error("Error assigning role:", assignRoleError);
+    console.error("[AUTH] Error assigning role:", assignRoleError);
     throw new Error("AuthError");
   }
+  console.log("[AUTH] Role assigned successfully");
 
-  // Get user profile with roles using authenticated client
-  const userProfile = await getUserProfile(authenticatedClient, userId);
+  // Get user profile with roles using admin client (bypass RLS during registration)
+  // Note: This is safe because we're in a server-side registration flow
+  console.log("[AUTH] Fetching user profile for userId:", userId);
+  const userProfile = await getUserProfile(adminClient, userId);
   if (!userProfile) {
+    console.error("[AUTH] User profile not found after registration!");
     throw new Error("AuthError");
   }
+  console.log("[AUTH] User profile fetched:", userProfile);
 
   // Log audit event using anon client (we have RLS policy for this)
   await logAuditEvent(supabase, "LOGIN", userId, { action: "register" });

@@ -5,7 +5,7 @@
 
 import type { APIRoute } from "astro";
 import { getAllConfig } from "@/lib/services/configService";
-import { supabaseAdminClient } from "@/db/supabase.client";
+import { getSupabaseAdminClient } from "@/db/supabase.client";
 
 export const prerender = false;
 
@@ -26,7 +26,7 @@ export const GET: APIRoute = async ({ locals }) => {
     // }
 
     // Get all configuration using admin client (bypasses RLS)
-    const config = await getAllConfig(supabaseAdminClient);
+    const config = await getAllConfig(getSupabaseAdminClient());
 
     return new Response(JSON.stringify(config), {
       status: 200,

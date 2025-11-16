@@ -4,12 +4,13 @@
  */
 
 import { defineMiddleware } from "astro:middleware";
-import { supabaseClient } from "@/db/supabase.client";
+import { getSupabaseClient } from "@/db/supabase.client";
 import { getProfile } from "@/lib/services/userService";
 
 export const onRequest = defineMiddleware(async (context, next) => {
-  // Initialize Supabase client in locals for all requests
-  context.locals.supabase = supabaseClient;
+  // Initialize Supabase client in locals for all requests (lazy initialization)
+  const supabase = getSupabaseClient();
+  context.locals.supabase = supabase;
 
   // Extract JWT token from Authorization header
   const authHeader = context.request.headers.get("Authorization");
@@ -19,11 +20,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
     try {
       // Verify JWT token with Supabase Auth
-      const { data, error } = await supabaseClient.auth.getUser(token);
+      const { data, error } = await supabase.auth.getUser(token);
 
       if (!error && data.user) {
         // Fetch full user profile with roles from our database
-        const userProfile = await getProfile(supabaseClient, data.user.id);
+        const userProfile = await getProfile(supabase, data.user.id);
 
         if (userProfile) {
           context.locals.user = userProfile;
