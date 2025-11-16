@@ -8,6 +8,11 @@ import { getSupabaseClient, getSupabaseAdminClient } from "@/db/supabase.client"
 import { getProfile } from "@/lib/services/userService";
 
 export const onRequest = defineMiddleware(async (context, next) => {
+  // Skip middleware during static prerendering (Astro.request may not be available)
+  if (!context.request || !context.request.headers) {
+    return next();
+  }
+
   // Initialize Supabase client in locals for all requests (lazy initialization)
   const supabase = getSupabaseClient();
   context.locals.supabase = supabase;
