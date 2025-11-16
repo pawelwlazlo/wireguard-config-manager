@@ -124,6 +124,18 @@ jobs:
             echo "After cd to deploy path, now at: $(pwd)"
             docker compose down || true
             
+            # Create .env file with secrets from GitHub
+            cat > .env << EOF
+            SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+            SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+            SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+            NODE_ENV=production
+            HOST=0.0.0.0
+            PORT=4321
+            EOF
+            
+            echo "✓ Created .env file from GitHub secrets"
+            
             # Build and start new containers with --no-cache to ensure fresh build
             docker compose build --no-cache
             docker compose up -d
