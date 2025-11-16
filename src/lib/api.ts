@@ -22,6 +22,7 @@ class ApiClient {
       try {
         const response = await fetch(url, {
           ...options,
+          credentials: "same-origin", // Include cookies in same-origin requests
           headers: {
             "Content-Type": "application/json",
             ...options.headers,

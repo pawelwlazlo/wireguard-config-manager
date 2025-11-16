@@ -165,3 +165,4 @@ interface UseAuditLogResult {
 8. **A11y**: upewnij się, że tabela ma `aria-label`, nagłówki scope, focus-ring.
 9. **Tests**: napisz testy Cypress/Playwright: filtracja, sort, paginacja.
 10. **Docs**: dodaj opis w `.ai/ui-plan.md` (sekcja Audit aktualizacja).
+

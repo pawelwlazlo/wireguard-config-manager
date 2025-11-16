@@ -49,10 +49,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Login user via service
     const authResponse = await loginUser(locals.supabase, email, password);
 
+    // Set JWT in HTTP-only cookie for SSR
+    // Use Secure flag only in production (HTTPS)
+    const isProduction = import.meta.env.PROD;
+    const securFlag = isProduction ? "; Secure" : "";
+    const headers = new Headers({
+      "Content-Type": "application/json",
+      "Set-Cookie": `jwt=${authResponse.jwt}; Path=/; HttpOnly${securFlag}; SameSite=Lax; Max-Age=${60 * 60 * 24 * 7}`, // 7 days
+    });
+
     // Return 200 OK with user data and JWT
     return new Response(JSON.stringify(authResponse), {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers,
     });
   } catch (error) {
     console.error("Error during user login:", error);

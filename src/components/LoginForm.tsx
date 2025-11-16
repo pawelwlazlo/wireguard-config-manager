@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ErrorBanner } from "@/components/ErrorBanner";
-import type { LoginCommand, AuthResponse } from "@/types";
+import type { AuthResponse } from "@/types";
 
 // Validation schema matching backend
 const LoginSchema = z.object({
@@ -79,14 +79,15 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
 
       const authResponse: AuthResponse = await response.json();
       
-      // Store JWT in localStorage
-      localStorage.setItem("jwt", authResponse.jwt);
+      // JWT is now stored in HTTP-only cookie by the server
+      // Optionally store user data in localStorage for client-side access
       localStorage.setItem("user", JSON.stringify(authResponse.user));
 
       // Call success callback or redirect
       if (onSuccess) {
         onSuccess(authResponse);
       } else {
+        // Redirect to home page - JWT cookie will be sent automatically
         window.location.href = "/";
       }
     } catch (error) {

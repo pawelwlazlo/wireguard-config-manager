@@ -12,12 +12,24 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const supabase = getSupabaseClient();
   context.locals.supabase = supabase;
 
-  // Extract JWT token from Authorization header
-  const authHeader = context.request.headers.get("Authorization");
+  // Extract JWT token from cookie or Authorization header
+  let token: string | undefined;
   
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    const token = authHeader.substring(7); // Remove "Bearer " prefix
-
+  // First, try to get token from cookie (SSR)
+  const jwtCookie = context.cookies.get("jwt");
+  if (jwtCookie) {
+    token = jwtCookie.value;
+  }
+  
+  // Fallback to Authorization header (API requests)
+  if (!token) {
+    const authHeader = context.request.headers.get("Authorization");
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.substring(7); // Remove "Bearer " prefix
+    }
+  }
+  
+  if (token) {
     try {
       // Verify JWT token with Supabase Auth
       const { data, error } = await supabase.auth.getUser(token);

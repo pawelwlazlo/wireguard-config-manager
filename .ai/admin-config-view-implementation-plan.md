@@ -138,3 +138,4 @@ Mapowanie do frontend-u:
 8. **Testy** – dodać testy jednostkowe hooka (mock fetch) oraz testy integracyjne strony przy pomocy Playwright.  
 9. **QA** – sprawdzić responsywność oraz obsługę wolnych/nieudanych połączeń.  
 10. **Dokumentacja** – zaktualizować README sekcja „Admin Config”.
+
