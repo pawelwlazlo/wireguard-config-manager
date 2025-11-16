@@ -19,10 +19,12 @@ COPY . .
 ARG SUPABASE_URL
 ARG SUPABASE_ANON_KEY
 
-# Build the application with environment variables
-RUN SUPABASE_URL=$SUPABASE_URL \
-    SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY \
-    pnpm run build
+# Create .env file for build with required variables
+RUN echo "SUPABASE_URL=${SUPABASE_URL}" > .env && \
+    echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}" >> .env
+
+# Build the application
+RUN pnpm run build
 
 # Production stage
 FROM node:22-alpine
