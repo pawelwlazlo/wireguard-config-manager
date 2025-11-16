@@ -77,9 +77,14 @@ The system reduces the time to distribute configurations from over 15 minutes pe
    ```
 
 4. **Set up environment variables**
-   - Create a `.env` file in the root directory
-   - Configure Supabase connection details and other required environment variables
-   - (Refer to project documentation for specific environment variable requirements)
+   ```bash
+   cp env.example .env
+   ```
+   - Edit `.env` and configure the following:
+     - Supabase connection details (URL, anon key, service role key)
+     - `IMPORT_DIR`: Path to directory containing WireGuard `.conf` files
+     - `ENCRYPTION_KEY`: Generate using `openssl rand -hex 32`
+   - See `env.example` for detailed descriptions of all variables
 
 5. **Start the development server**
    ```bash
