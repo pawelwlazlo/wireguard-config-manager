@@ -6,6 +6,7 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { updateUser } from "@/lib/services/userService";
+import { getSupabaseAdminClient } from "@/db/supabase.client";
 
 export const prerender = false;
 
@@ -90,8 +91,9 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
       );
     }
 
+    // Use admin client to bypass RLS for updating user
     const updatedUser = await updateUser(
-      locals.supabase,
+      getSupabaseAdminClient(),
       userId,
       locals.user.id,
       bodyResult.data

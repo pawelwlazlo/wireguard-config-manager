@@ -12,26 +12,10 @@ type UserRow = Tables<{ schema: "app" }, "users">;
 type RoleRow = Tables<{ schema: "app" }, "roles">;
 
 /**
- * In-memory cache for accepted domains
- * Cache expires after 5 minutes
- */
-let acceptedDomainsCache: string[] | null = null;
-let acceptedDomainsCacheTime: number = 0;
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-
-/**
- * Get accepted email domains from database with caching
+ * Get accepted email domains from database
+ * Always fetches fresh data from database (no caching)
  */
 async function getAcceptedDomains(supabase: SupabaseClient): Promise<string[]> {
-  const now = Date.now();
-
-  // Return cached value if still valid
-  if (acceptedDomainsCache && now - acceptedDomainsCacheTime < CACHE_TTL) {
-    return acceptedDomainsCache;
-  }
-
-  // Fetch from database
   const { data, error } = await supabase
     .schema("app")
     .from("accepted_domains")
@@ -42,11 +26,7 @@ async function getAcceptedDomains(supabase: SupabaseClient): Promise<string[]> {
     throw new Error("DatabaseError");
   }
 
-  // Update cache
-  acceptedDomainsCache = (data || []).map((row) => row.domain);
-  acceptedDomainsCacheTime = now;
-
-  return acceptedDomainsCache;
+  return (data || []).map((row) => row.domain);
 }
 
 /**

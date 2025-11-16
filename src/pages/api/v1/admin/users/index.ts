@@ -6,6 +6,7 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { listUsers } from "@/lib/services/userService";
+import { getSupabaseAdminClient } from "@/db/supabase.client";
 
 export const prerender = false;
 
@@ -37,12 +38,13 @@ export const GET: APIRoute = async ({ url, locals }) => {
     }
 
     // Parse and validate query parameters
+    // Convert null to undefined for optional parameters
     const queryParams = {
-      status: url.searchParams.get("status"),
-      domain: url.searchParams.get("domain"),
-      page: url.searchParams.get("page"),
-      size: url.searchParams.get("size"),
-      sort: url.searchParams.get("sort"),
+      status: url.searchParams.get("status") || undefined,
+      domain: url.searchParams.get("domain") || undefined,
+      page: url.searchParams.get("page") || undefined,
+      size: url.searchParams.get("size") || undefined,
+      sort: url.searchParams.get("sort") || undefined,
     };
 
     const validationResult = QuerySchema.safeParse(queryParams);
@@ -60,7 +62,8 @@ export const GET: APIRoute = async ({ url, locals }) => {
 
     const { status, domain, page, size, sort } = validationResult.data;
 
-    const result = await listUsers(locals.supabase, {
+    // Use admin client to bypass RLS for listing all users
+    const result = await listUsers(getSupabaseAdminClient(), {
       status,
       domain,
       page,

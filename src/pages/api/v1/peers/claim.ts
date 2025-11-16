@@ -5,17 +5,27 @@
 
 import type { APIRoute } from "astro";
 import { claimNextPeer } from "@/lib/services/peerService";
+import { getSupabaseAdminClient } from "@/db/supabase.client";
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ locals }) => {
   try {
-    // TODO: For now, we'll use a mock user ID until auth is implemented
-    // This should be replaced with: const userId = locals.user?.id
-    const mockUserId = "00000000-0000-0000-0000-000000000000";
+    // Check if user is authenticated
+    if (!locals.user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", message: "Authentication required" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Use admin client for admins to avoid RLS recursion, regular client for users
+    const client = locals.user.roles.includes('admin') 
+      ? getSupabaseAdminClient() 
+      : locals.supabase;
 
     // Claim next available peer
-    const peer = await claimNextPeer(locals.supabase, mockUserId);
+    const peer = await claimNextPeer(client, locals.user.id);
 
     // Return claimed peer
     return new Response(JSON.stringify(peer), {
