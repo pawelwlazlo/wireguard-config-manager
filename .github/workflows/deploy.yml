@@ -117,6 +117,9 @@ jobs:
             # Install pnpm globally using npm with sudo
             which pnpm || sudo npm install -g pnpm
             
+            # Make sure we're in the deployment directory
+            cd "$DEPLOY_PATH"
+            
             # Install dependencies
             pnpm install --frozen-lockfile
             
