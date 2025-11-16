@@ -148,6 +148,7 @@ export type Database = {
           created_at: string;
           friendly_name: string | null;
           id: string;
+          import_batch_id: string | null;
           imported_at: string;
           owner_id: string | null;
           public_key: string;
@@ -161,6 +162,7 @@ export type Database = {
           created_at?: string;
           friendly_name?: string | null;
           id?: string;
+          import_batch_id?: string | null;
           imported_at: string;
           owner_id?: string | null;
           public_key: string;
@@ -174,6 +176,7 @@ export type Database = {
           created_at?: string;
           friendly_name?: string | null;
           id?: string;
+          import_batch_id?: string | null;
           imported_at?: string;
           owner_id?: string | null;
           public_key?: string;
@@ -182,6 +185,13 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "peers_import_batch_id_fkey";
+            columns: ["import_batch_id"];
+            isOneToOne: false;
+            referencedRelation: "import_batches";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "peers_owner_id_fkey";
             columns: ["owner_id"];
