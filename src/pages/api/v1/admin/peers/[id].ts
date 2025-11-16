@@ -6,6 +6,7 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { revokePeer } from "@/lib/services/peerService";
+import { getSupabaseAdminClient } from "@/db/supabase.client";
 
 export const prerender = false;
 
@@ -13,10 +14,21 @@ const IdParamSchema = z.uuid();
 
 export const DELETE: APIRoute = async ({ params, locals }) => {
   try {
-    // TODO: Check if user is admin (when auth is implemented)
-    // if (!locals.user || !isAdmin(locals.user)) {
-    //   return forbidden("Admin access required");
-    // }
+    // Check if user is authenticated
+    if (!locals.user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", message: "Authentication required" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if user has admin role
+    if (!locals.user.roles.includes("admin")) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden", message: "Admin access required" }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
     // Validate path parameter
     const parseResult = IdParamSchema.safeParse(params.id);
@@ -32,8 +44,8 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
 
     const peerId = parseResult.data;
 
-    // Revoke peer (admin can revoke any peer via RLS)
-    await revokePeer(locals.supabase, peerId);
+    // Revoke peer using admin client to bypass RLS
+    await revokePeer(getSupabaseAdminClient(), peerId);
 
     // Return 204 No Content
     return new Response(null, { status: 204 });

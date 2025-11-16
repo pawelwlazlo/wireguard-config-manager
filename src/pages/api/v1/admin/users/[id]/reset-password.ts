@@ -46,8 +46,9 @@ export const POST: APIRoute = async ({ params, locals }) => {
 
     const userId = paramResult.data;
 
+    // Use admin client to bypass RLS for password reset
     const temporaryPassword = await resetUserPassword(
-      locals.supabase,
+      getSupabaseAdminClient(),
       getSupabaseAdminClient(),
       userId,
       locals.user.id

@@ -7,6 +7,7 @@ import type { APIRoute } from "astro";
 import { z } from "zod";
 import { getPeersAdmin } from "@/lib/services/peerService";
 import type { Page, PeerDto } from "@/types";
+import { getSupabaseAdminClient } from "@/db/supabase.client";
 
 export const prerender = false;
 
@@ -19,10 +20,21 @@ const QuerySchema = z.object({
 
 export const GET: APIRoute = async ({ url, locals }) => {
   try {
-    // TODO: Check if user is admin (when auth is implemented)
-    // if (!locals.user || !isAdmin(locals.user)) {
-    //   return forbidden("Admin access required");
-    // }
+    // Check if user is authenticated
+    if (!locals.user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", message: "Authentication required" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if user has admin role
+    if (!locals.user.roles.includes("admin")) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden", message: "Admin access required" }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
     // Parse query parameters
     const queryParams = Object.fromEntries(url.searchParams.entries());
@@ -41,8 +53,8 @@ export const GET: APIRoute = async ({ url, locals }) => {
 
     const { status, owner, page, size } = parseResult.data;
 
-    // Fetch all peers with filters
-    const result = await getPeersAdmin(locals.supabase, {
+    // Fetch all peers with filters using admin client to bypass RLS
+    const result = await getPeersAdmin(getSupabaseAdminClient(), {
       status,
       ownerId: owner,
       page,

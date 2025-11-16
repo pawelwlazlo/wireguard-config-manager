@@ -6,6 +6,7 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { assignPeerToUser } from "@/lib/services/peerService";
+import { getSupabaseAdminClient } from "@/db/supabase.client";
 
 export const prerender = false;
 
@@ -17,10 +18,21 @@ const AssignPeerSchema = z.object({
 
 export const POST: APIRoute = async ({ params, request, locals }) => {
   try {
-    // TODO: Check if user is admin (when auth is implemented)
-    // if (!locals.user || !isAdmin(locals.user)) {
-    //   return forbidden("Admin access required");
-    // }
+    // Check if user is authenticated
+    if (!locals.user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", message: "Authentication required" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if user has admin role
+    if (!locals.user.roles.includes("admin")) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden", message: "Admin access required" }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
     // Validate path parameter
     const parseResult = IdParamSchema.safeParse(params.id);
@@ -64,8 +76,8 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 
     const { user_id } = bodyParseResult.data;
 
-    // Assign peer to user
-    const peer = await assignPeerToUser(locals.supabase, peerId, user_id);
+    // Assign peer to user using admin client to bypass RLS
+    const peer = await assignPeerToUser(getSupabaseAdminClient(), peerId, user_id);
 
     // Return assigned peer
     return new Response(JSON.stringify(peer), {
