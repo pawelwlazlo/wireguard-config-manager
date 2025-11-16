@@ -239,3 +239,30 @@ export interface UseAuditLogResult {
   error?: string;
   setState(state: Partial<AuditPageState>): void;
 }
+
+/* -------------------------------------------------------------------------- */
+/*                        Admin Config View Models                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * System status indicator for config view
+ */
+export type SystemStatus = "ok" | "degraded" | "down";
+
+/**
+ * View model for single config item
+ */
+export interface ConfigItemVM {
+  key: string;
+  value: string;
+}
+
+/**
+ * Complete state for admin config page
+ */
+export interface AdminConfigState {
+  items: ConfigItemVM[];
+  status: SystemStatus;
+  loading: boolean;
+  error: string | null;
+}

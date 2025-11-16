@@ -13,7 +13,8 @@ import type {
   UpdateUserCommand,
   ResetPasswordResponse,
   AuditDto,
-  AuditEvent
+  AuditEvent,
+  ConfigDto
 } from "@/types";
 
 interface ApiError {
@@ -194,6 +195,11 @@ class ApiClient {
     return this.fetchWithRetry<Page<AuditDto>>(
       `${this.baseUrl}/admin/audit?${params.toString()}`
     );
+  }
+
+  // Admin config endpoint
+  async getConfig(): Promise<ConfigDto> {
+    return this.fetchWithRetry<ConfigDto>(`${this.baseUrl}/admin/config`);
   }
 }
 
