@@ -53,22 +53,38 @@ jobs:
           
           echo "Created archive: $ARCHIVE_NAME"
       
-      - name: Copy files to VPS
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          source: "deployment-*.tar.gz"
-          target: "/tmp/"
-      
-      - name: Deploy on VPS
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
+      - name: Copy archive and deploy on VPS
+        run: |
+          # Save SSH key to file
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          
+          # Find our archive
+          ARCHIVE=$(ls deployment-*.tar.gz)
+          echo "Copying $ARCHIVE to VPS..."
+          
+          # Copy archive to VPS using SCP
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            "$ARCHIVE" \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/tmp/
+          
+          # Export secrets as env vars for SSH
+          export SUPABASE_URL="${{ secrets.SUPABASE_URL }}"
+          export SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}"
+          export SUPABASE_SERVICE_ROLE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+          export ENCRYPTION_KEY="${{ secrets.ENCRYPTION_KEY }}"
+          export IMPORT_DIR="${{ secrets.IMPORT_DIR }}"
+          
+          # Run deployment script via SSH
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            "SUPABASE_URL='$SUPABASE_URL' \
+             SUPABASE_ANON_KEY='$SUPABASE_ANON_KEY' \
+             SUPABASE_SERVICE_ROLE_KEY='$SUPABASE_SERVICE_ROLE_KEY' \
+             ENCRYPTION_KEY='$ENCRYPTION_KEY' \
+             IMPORT_DIR='$IMPORT_DIR' \
+             bash -s" << 'ENDSSH'
             set -e
             
             # Find the newest deployment archive
@@ -154,23 +170,21 @@ jobs:
             echo "After cd to deploy path, now at: $(pwd)"
             docker compose down || true
             
-            # Create .env file with secrets from GitHub
+            # Create .env file with secrets passed via SSH
             cat > .env << EOF
-            SUPABASE_URL=${{ secrets.SUPABASE_URL }}
-            SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
-            SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-            ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
-            IMPORT_DIR=${{ secrets.IMPORT_DIR }}
-            NODE_ENV=production
-            HOST=0.0.0.0
-            PORT=4321
-            EOF
+SUPABASE_URL=$SUPABASE_URL
+SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY
+ENCRYPTION_KEY=$ENCRYPTION_KEY
+IMPORT_DIR=$IMPORT_DIR
+NODE_ENV=production
+HOST=0.0.0.0
+PORT=4321
+EOF
             
             echo "✓ Created .env file from GitHub secrets"
             
-            # Export environment variables for docker-compose build
-            export SUPABASE_URL="${{ secrets.SUPABASE_URL }}"
-            export SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}"
+            # Export environment variables for docker-compose build (already set)
             
             # Build and start new containers with --no-cache to ensure fresh build
             docker compose build --no-cache
@@ -184,4 +198,9 @@ jobs:
             
             echo "✓ Deployment completed successfully!"
             echo "✓ Application is running on port 4321"
-
+ENDSSH
+          
+          # Clean up SSH key
+          rm -f ~/.ssh/deploy_key
+          
+          echo "✓ Deployment workflow completed"
