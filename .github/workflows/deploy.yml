@@ -65,8 +65,8 @@ jobs:
           script: |
             set -e
             
-            # Define deployment path
-            DEPLOY_PATH="${{ secrets.VPS_PATH }}"
+            # Define deployment path (hardcoded)
+            DEPLOY_PATH="/home/ubuntu/docker/wireguard-config-manager"
             
             # Create deployment directory if it doesn't exist
             mkdir -p "$DEPLOY_PATH"
@@ -93,8 +93,15 @@ jobs:
             
             # Extract new files
             cd "$DEPLOY_PATH"
+            echo "Extracting files to: $(pwd)"
             tar -xzf /tmp/deployment.tar.gz
             rm /tmp/deployment.tar.gz
+            
+            # Verify extraction
+            echo "=== Files after extraction ==="
+            ls -la docker-compose.yml 2>&1 || echo "docker-compose.yml not found!"
+            head -5 docker-compose.yml 2>&1 || echo "Cannot read docker-compose.yml"
+            echo "=============================="
             
             # Restore .env file (if it was backed up)
             if [ -f "/tmp/.env.backup" ]; then
