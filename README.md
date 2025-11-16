@@ -170,7 +170,11 @@ The application can be deployed to a VPS using Docker and GitHub Actions for aut
    Add your environment variables (use `env.example` as reference):
    ```env
    # Supabase Configuration (required for both build and runtime)
-   PUBLIC_SUPABASE_URL=your_supabase_url
+   # If using local Supabase (supabase start), use internal Docker network name:
+   PUBLIC_SUPABASE_URL=http://supabase_kong_ubuntu:8000
+   # If using Supabase Cloud, use public URL:
+   # PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+   
    PUBLIC_SUPABASE_ANON_KEY=your_anon_key
    SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
    
@@ -181,7 +185,11 @@ The application can be deployed to a VPS using Docker and GitHub Actions for aut
    # Add other required variables from env.example
    ```
    
-   **Important**: The `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_ANON_KEY` variables are required during Docker build process for pre-rendering static pages. Make sure they are set in the `env/.env` file before running `docker compose up --build`.
+   **Important Notes**:
+   - The `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_ANON_KEY` variables are required during Docker build process for pre-rendering static pages.
+   - If using **local Supabase** (`supabase start`), use the internal Docker container name (e.g., `http://supabase_kong_ubuntu:8000`). Check your Kong container name with `docker ps | grep kong`.
+   - If using **Supabase Cloud**, use the public HTTPS URL provided by Supabase.
+   - The application connects to Supabase through the `supabase_network_ubuntu` Docker network (configured in `docker-compose.yml`).
 
 ### GitHub Configuration
 
