@@ -158,13 +158,13 @@ The application can be deployed to a VPS using Docker and GitHub Actions for aut
 
 2. **Create application directory structure**
    ```bash
-   mkdir -p /home/ubuntu/docker/wireguard-config-manager/env
+   mkdir -p /home/ubuntu/docker/wireguard-config-manager
    cd /home/ubuntu/docker/wireguard-config-manager
    ```
 
 3. **Create environment file**
    ```bash
-   nano env/.env
+   nano .env
    ```
    
    Add your environment variables (use `env.example` as reference):
@@ -190,7 +190,7 @@ The application can be deployed to a VPS using Docker and GitHub Actions for aut
    - If using **local Supabase** (`supabase start`), use the internal Docker container name (e.g., `http://supabase_kong_wireguard-config-manager:8000`). Check your Kong container name with `docker ps | grep kong`.
    - If using **Supabase Cloud**, use the public HTTPS URL provided by Supabase.
    - The application connects to Supabase through the `supabase_network_wireguard-config-manager` Docker network (configured in `docker-compose.yml`).
-   - During deployment, the workflow automatically copies `env/.env` to `.env` in the root directory so Docker Compose can load the variables for build arguments.
+   - The `.env` file must exist in the deployment directory before running the workflow. The deployment will fail if `.env` is not found.
 
 ### GitHub Configuration
 
@@ -278,7 +278,7 @@ docker compose logs wireguard-manager
 ```
 
 Common issues:
-- **Missing environment variables**: Verify `env/.env` file exists and contains all required variables
+- **Missing environment variables**: Verify `.env` file exists in the deployment directory and contains all required variables
 - **Port conflict**: Ensure port 4321 is not already in use (`sudo lsof -i :4321`)
 - **Permission issues**: Ensure Docker has permission to read files
 
@@ -293,7 +293,7 @@ Common issues:
 
 #### Application returns errors
 
-1. Check environment variables in `env/.env`
+1. Check environment variables in `.env`
 2. Verify Supabase connection details
 3. Ensure database migrations have been run
 4. Check application logs: `docker compose logs -f`

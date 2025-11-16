@@ -76,10 +76,10 @@ jobs:
               rm -rf "$DEPLOY_PATH/backup"
             fi
             
-            # Create backup of current files (except env directory and .env file)
+            # Create backup of current files (except .env file)
             if [ -f "$DEPLOY_PATH/docker-compose.yml" ]; then
               mkdir -p "$DEPLOY_PATH/backup"
-              rsync -a --exclude='env' --exclude='.env' "$DEPLOY_PATH/" "$DEPLOY_PATH/backup/" || true
+              rsync -a --exclude='.env' "$DEPLOY_PATH/" "$DEPLOY_PATH/backup/" || true
             fi
             
             # Extract new files
@@ -87,14 +87,10 @@ jobs:
             tar -xzf /tmp/deployment.tar.gz
             rm /tmp/deployment.tar.gz
             
-            # Ensure env directory exists
-            mkdir -p "$DEPLOY_PATH/env"
-            
-            # Copy env/.env to root for docker-compose to load variables
-            if [ -f "$DEPLOY_PATH/env/.env" ]; then
-              cp "$DEPLOY_PATH/env/.env" "$DEPLOY_PATH/.env"
-            else
-              echo "Warning: env/.env file not found!"
+            # Verify .env file exists
+            if [ ! -f "$DEPLOY_PATH/.env" ]; then
+              echo "ERROR: .env file not found in $DEPLOY_PATH"
+              echo "Please create .env file with required environment variables before deployment"
               exit 1
             fi
             

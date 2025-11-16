@@ -10,10 +10,10 @@ services:
     ports:
       - "4321:4321"
     volumes:
-      - ./env/.env:/app/.env:ro
+      - ./.env:/app/.env:ro
     restart: unless-stopped
     env_file:
-      - ./env/.env
+      - ./.env
     environment:
       - NODE_ENV=production
       - HOST=0.0.0.0
