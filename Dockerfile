@@ -19,9 +19,8 @@ COPY . .
 ARG SUPABASE_URL
 ARG SUPABASE_ANON_KEY
 
-# Create .env file for build with required variables
-RUN echo "SUPABASE_URL=${SUPABASE_URL}" > .env && \
-    echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}" >> .env
+# Create .env file with build-time variables (after COPY since .env is in .dockerignore)
+RUN printf "SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\n" "$SUPABASE_URL" "$SUPABASE_ANON_KEY" > /app/.env
 
 # Build the application
 RUN pnpm run build
