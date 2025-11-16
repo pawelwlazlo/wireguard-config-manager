@@ -6,22 +6,24 @@ import { useState } from "react";
 import { useDashboard } from "@/components/hooks/useDashboard";
 import { StatsCard } from "@/components/StatsCard";
 import { ClaimPeerButton } from "@/components/ClaimPeerButton";
+import { PeerList } from "@/components/PeerList";
+import { PeerDetailsModal } from "@/components/PeerDetailsModal";
+import { EmptyState } from "@/components/EmptyState";
 import type { PeerDto } from "@/types";
 
 export function Dashboard() {
   const {
-    user,
     peers,
     loading,
     error,
     claimedCount,
     peerLimit,
-    claimPeer,
     downloadPeer,
     updatePeer,
     revokePeer,
   } = useDashboard();
 
+  const [selectedPeer, setSelectedPeer] = useState<PeerDto | null>(null);
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
@@ -38,6 +40,40 @@ export function Dashboard() {
 
   const handleClaimError = (error: Error) => {
     showToast(error.message || "Failed to claim configuration", "error");
+  };
+
+  const handlePeerUpdate = (peer: PeerDto) => {
+    setSelectedPeer(peer);
+  };
+
+  const handlePeerSave = async (peer: PeerDto, friendlyName: string) => {
+    try {
+      await updatePeer(peer.id, { friendly_name: friendlyName });
+      showToast("Configuration updated successfully!", "success");
+      setSelectedPeer(null);
+    } catch (error) {
+      throw error; // Let modal handle the error display
+    }
+  };
+
+  const handlePeerDelete = async (id: string) => {
+    try {
+      const success = await revokePeer(id);
+      if (success) {
+        showToast("Configuration revoked successfully!", "success");
+      } else {
+        showToast("Failed to revoke configuration", "error");
+      }
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Failed to revoke configuration",
+        "error"
+      );
+    }
+  };
+
+  const handlePeerDownload = (id: string) => {
+    downloadPeer(id);
   };
 
   if (loading) {
@@ -144,40 +180,33 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Peer List Placeholder */}
+      {/* Peer List or Empty State */}
       <div className="rounded-lg border bg-card p-6">
         <h2 className="mb-4 text-lg font-semibold">Your Configurations</h2>
         {peers.length === 0 ? (
-          <div className="py-12 text-center">
-            <p className="text-muted-foreground">
-              No configurations yet. Click "Get New Configuration" to claim one.
-            </p>
-          </div>
+          <EmptyState
+            variant={isAtLimit ? "limit-reached" : "no-peers"}
+            onAction={() => {
+              // Scroll to claim button
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          />
         ) : (
-          <div className="space-y-4">
-            {peers.map((peer) => (
-              <div
-                key={peer.id}
-                className="flex items-center justify-between rounded-lg border p-4"
-              >
-                <div>
-                  <p className="font-medium">
-                    {peer.friendly_name || "Unnamed Configuration"}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {peer.public_key.substring(0, 20)}...
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800">
-                    {peer.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <PeerList
+            peers={peers}
+            onPeerUpdate={handlePeerUpdate}
+            onPeerDelete={handlePeerDelete}
+            onPeerDownload={handlePeerDownload}
+          />
         )}
       </div>
+
+      {/* Peer Details Modal */}
+      <PeerDetailsModal
+        peer={selectedPeer}
+        onClose={() => setSelectedPeer(null)}
+        onSave={handlePeerSave}
+      />
     </div>
   );
 }
