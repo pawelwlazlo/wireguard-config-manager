@@ -158,20 +158,24 @@ The application can be deployed to a VPS using Docker and GitHub Actions for aut
 
 2. **Create application directory structure**
    ```bash
-   mkdir -p /home/ubuntu/docker/wireguard-config-manager/env
+   mkdir -p /home/ubuntu/docker/wireguard-config-manager
    cd /home/ubuntu/docker/wireguard-config-manager
    ```
 
 3. **Create environment file**
    ```bash
-   nano env/.env
+   nano .env
    ```
    
    Add your environment variables (use `env.example` as reference):
    ```env
-   # Supabase Configuration
-   PUBLIC_SUPABASE_URL=your_supabase_url
-   PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+   # Supabase Configuration (required for both build and runtime)
+   # If using local Supabase (supabase start), use internal Docker network name:
+   SUPABASE_URL=http://supabase_kong_wireguard-config-manager:8000
+   # If using Supabase Cloud, use public URL:
+   # SUPABASE_URL=https://your-project.supabase.co
+   
+   SUPABASE_ANON_KEY=your_anon_key
    SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
    
    # Application Configuration
@@ -180,6 +184,13 @@ The application can be deployed to a VPS using Docker and GitHub Actions for aut
    
    # Add other required variables from env.example
    ```
+   
+   **Important Notes**:
+   - The `SUPABASE_URL` and `SUPABASE_ANON_KEY` variables are required during Docker build process for pre-rendering static pages.
+   - If using **local Supabase** (`supabase start`), use the internal Docker container name (e.g., `http://supabase_kong_wireguard-config-manager:8000`). Check your Kong container name with `docker ps | grep kong`.
+   - If using **Supabase Cloud**, use the public HTTPS URL provided by Supabase.
+   - The application connects to Supabase through the `supabase_network_wireguard-config-manager` Docker network (configured in `docker-compose.yml`).
+   - The `.env` file must exist in the deployment directory before running the workflow. The deployment will fail if `.env` is not found.
 
 ### GitHub Configuration
 
@@ -243,7 +254,7 @@ SSH into your VPS and check container status:
 
 ```bash
 cd /home/ubuntu/docker/wireguard-config-manager
-docker-compose ps
+docker compose ps
 ```
 
 Expected output:
@@ -254,7 +265,7 @@ wireguard-config-manager      "node ./dist/server/…"   wireguard-manager   Up 
 
 View container logs:
 ```bash
-docker-compose logs -f wireguard-manager
+docker compose logs -f wireguard-manager
 ```
 
 ### Troubleshooting
@@ -263,11 +274,11 @@ docker-compose logs -f wireguard-manager
 
 Check logs for errors:
 ```bash
-docker-compose logs wireguard-manager
+docker compose logs wireguard-manager
 ```
 
 Common issues:
-- **Missing environment variables**: Verify `env/.env` file exists and contains all required variables
+- **Missing environment variables**: Verify `.env` file exists in the deployment directory and contains all required variables
 - **Port conflict**: Ensure port 4321 is not already in use (`sudo lsof -i :4321`)
 - **Permission issues**: Ensure Docker has permission to read files
 
@@ -282,10 +293,10 @@ Common issues:
 
 #### Application returns errors
 
-1. Check environment variables in `env/.env`
+1. Check environment variables in `.env`
 2. Verify Supabase connection details
 3. Ensure database migrations have been run
-4. Check application logs: `docker-compose logs -f`
+4. Check application logs: `docker compose logs -f`
 
 ### Manual Deployment (Alternative)
 
@@ -310,11 +321,11 @@ If you prefer to deploy manually without GitHub Actions:
    rm deploy.tar.gz
    
    # Build and start containers
-   docker-compose down
-   docker-compose up --build -d
+   docker compose down
+   docker compose up --build -d
    
    # View logs
-   docker-compose logs -f
+   docker compose logs -f
    ```
 
 ### Updating the Application
@@ -336,13 +347,13 @@ If a deployment fails, you can rollback to the previous version:
 cd /home/ubuntu/docker/wireguard-config-manager
 
 # Stop current containers
-docker-compose down
+docker compose down
 
 # Restore from backup
 rsync -a --delete backup/ ./
 
 # Start containers with previous version
-docker-compose up -d
+docker compose up -d
 ```
 
 ## Application Routes

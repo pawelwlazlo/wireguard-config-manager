@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
@@ -14,6 +14,13 @@ RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .
+
+# Accept build arguments for Supabase configuration
+ARG SUPABASE_URL
+ARG SUPABASE_ANON_KEY
+
+# Create .env file with build-time variables (after COPY since .env is in .dockerignore)
+RUN printf "SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\n" "$SUPABASE_URL" "$SUPABASE_ANON_KEY" > /app/.env
 
 # Build the application
 RUN pnpm run build

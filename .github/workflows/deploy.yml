@@ -9,10 +9,18 @@ on:
         default: 'main'
         type: string
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
-  deploy:
-    name: Build and Deploy
+  build:
+    name: Build Docker Image
     runs-on: ubuntu-latest
+    environment: prod
+    permissions:
+      contents: read
+      packages: write
     
     steps:
       - name: Checkout code
@@ -20,84 +28,117 @@ jobs:
         with:
           ref: ${{ inputs.branch }}
       
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          node-version: '20'
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
         with:
-          version: latest
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix={{branch}}-
       
-      - name: Create deployment archive
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+            SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+  
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    needs: build
+    environment: prod
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+      
+      - name: Copy docker-compose.yml to VPS
         run: |
-          # Exclude files that shouldn't be deployed
-          tar --exclude='.git' \
-              --exclude='node_modules' \
-              --exclude='dist' \
-              --exclude='tests' \
-              --exclude='test-*' \
-              --exclude='playwright-report' \
-              --exclude='test-results' \
-              --exclude='.env*' \
-              -czf deployment.tar.gz .
-      
-      - name: Copy files to VPS
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          source: "deployment.tar.gz"
-          target: "/tmp/"
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          
+          # Copy only docker-compose.yml
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            docker-compose.yml \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/home/ubuntu/docker/wireguard-config-manager/
+          
+          rm -f ~/.ssh/deploy_key
       
       - name: Deploy on VPS
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+          IMPORT_DIR: ${{ secrets.IMPORT_DIR }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          envs: SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,ENCRYPTION_KEY,IMPORT_DIR,GITHUB_TOKEN,GITHUB_ACTOR
           script: |
             set -e
             
-            # Define deployment path
-            DEPLOY_PATH="${{ secrets.VPS_PATH }}"
+            cd /home/ubuntu/docker/wireguard-config-manager
             
-            # Create deployment directory if it doesn't exist
-            mkdir -p "$DEPLOY_PATH"
+            # Create network if it doesn't exist
+            docker network create supabase_network_wireguard-config-manager 2>/dev/null || true
             
-            # Backup current deployment (if exists)
-            if [ -d "$DEPLOY_PATH/backup" ]; then
-              rm -rf "$DEPLOY_PATH/backup"
-            fi
+            # Login to GitHub Container Registry
+            echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
             
-            # Create backup of current files (except env directory)
-            if [ -f "$DEPLOY_PATH/docker-compose.yml" ]; then
-              mkdir -p "$DEPLOY_PATH/backup"
-              rsync -a --exclude='env' "$DEPLOY_PATH/" "$DEPLOY_PATH/backup/" || true
-            fi
+            # Stop old containers
+            docker compose down || true
             
-            # Extract new files
-            cd "$DEPLOY_PATH"
-            tar -xzf /tmp/deployment.tar.gz
-            rm /tmp/deployment.tar.gz
+            # Create .env file with runtime secrets
+            cat > .env << 'ENVEOF'
+            SUPABASE_URL=$SUPABASE_URL
+            SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
+            SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY
+            ENCRYPTION_KEY=$ENCRYPTION_KEY
+            IMPORT_DIR=$IMPORT_DIR
+            NODE_ENV=production
+            HOST=0.0.0.0
+            PORT=4321
+            ENVEOF
             
-            # Ensure env directory exists
-            mkdir -p "$DEPLOY_PATH/env"
+            # Substitute variables in .env
+            sed -i "s|\$SUPABASE_URL|$SUPABASE_URL|g" .env
+            sed -i "s|\$SUPABASE_ANON_KEY|$SUPABASE_ANON_KEY|g" .env
+            sed -i "s|\$SUPABASE_SERVICE_ROLE_KEY|$SUPABASE_SERVICE_ROLE_KEY|g" .env
+            sed -i "s|\$ENCRYPTION_KEY|$ENCRYPTION_KEY|g" .env
+            sed -i "s|\$IMPORT_DIR|$IMPORT_DIR|g" .env
             
-            # Stop and remove old containers
-            docker-compose down || true
+            echo "✓ Created .env file"
             
-            # Build and start new containers
-            docker-compose up --build -d
+            # Pull latest image and start containers
+            docker compose pull
+            docker compose up -d
             
-            # Clean up old Docker images
+            # Clean up old images
             docker image prune -f
             
-            # Show container status
-            docker-compose ps
+            # Show status
+            docker compose ps
             
-            echo "Deployment completed successfully!"
-            echo "Application is running on port 4321"
-
+            echo "✓ Deployment completed successfully!"
+            echo "✓ Application is running on port 4321"

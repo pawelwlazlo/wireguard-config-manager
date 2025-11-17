@@ -8,8 +8,20 @@ import { getSupabaseClient, getSupabaseAdminClient } from "@/db/supabase.client"
 import { getProfile } from "@/lib/services/userService";
 
 export const onRequest = defineMiddleware(async (context, next) => {
+  // Skip middleware during static prerendering (Astro.request may not be available)
+  if (!context.request || !context.request.headers) {
+    return next();
+  }
+
   // Initialize Supabase client in locals for all requests (lazy initialization)
-  const supabase = getSupabaseClient();
+  let supabase;
+  try {
+    supabase = getSupabaseClient();
+  } catch (error) {
+    // If Supabase initialization fails (e.g., missing env vars during build), skip auth
+    console.warn("Supabase client initialization failed, skipping auth middleware:", error);
+    return next();
+  }
   context.locals.supabase = supabase;
 
   // Extract JWT token from cookie or Authorization header

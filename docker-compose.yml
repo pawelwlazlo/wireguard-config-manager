@@ -1,18 +1,21 @@
-version: '3.8'
-
 services:
   wireguard-manager:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/pawelwlazlo/wireguard-config-manager:latest
     container_name: wireguard-config-manager
     ports:
       - "4321:4321"
     volumes:
-      - ./env/.env:/app/.env:ro
+      - ./.env:/app/.env:ro
     restart: unless-stopped
+    env_file:
+      - ./.env
     environment:
       - NODE_ENV=production
       - HOST=0.0.0.0
       - PORT=4321
+
+networks:
+  default:
+    name: supabase_network_wireguard-config-manager
+    external: true
 

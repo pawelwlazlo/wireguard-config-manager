@@ -3,6 +3,8 @@ import Layout from "@/layouts/Layout.astro";
 import { NotFoundIllustration } from "@/components/NotFoundIllustration";
 
 // This page is served automatically by Astro for all 404 errors
+// Disable prerendering to avoid build-time env variable issues
+export const prerender = false;
 ---
 
 <Layout title="404 - Strona nie znaleziona - WireGuard Config Manager">
