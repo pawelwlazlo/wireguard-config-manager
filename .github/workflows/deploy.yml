@@ -100,6 +100,9 @@ jobs:
             
             cd /home/ubuntu/docker/wireguard-config-manager
             
+            # Create network if it doesn't exist
+            docker network create supabase_network_wireguard-config-manager 2>/dev/null || true
+            
             # Login to GitHub Container Registry
             echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
             
