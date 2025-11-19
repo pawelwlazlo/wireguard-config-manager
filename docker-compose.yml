@@ -2,8 +2,9 @@ services:
   wireguard-manager:
     image: ghcr.io/pawelwlazlo/wireguard-config-manager:latest
     container_name: wireguard-config-manager
-    ports:
-      - "4321:4321"
+    # Port removed - Cloudflare Tunnel will handle external traffic
+    expose:
+      - "4321"
     volumes:
       - ./.env:/app/.env:ro
     restart: unless-stopped
@@ -13,6 +14,16 @@ services:
       - NODE_ENV=production
       - HOST=0.0.0.0
       - PORT=4321
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared-wireguard
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - wireguard-manager
 
 networks:
   default:
