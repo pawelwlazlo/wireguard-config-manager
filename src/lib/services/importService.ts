@@ -7,7 +7,7 @@ import type { SupabaseClient } from "@/db/supabase.client";
 import type { ImportResultDto } from "@/types";
 import { readdir, readFile } from "node:fs/promises";
 import { join, extname } from "node:path";
-import { createCipheriv, randomBytes } from "node:crypto";
+import { encryptConfig } from "./cryptoService";
 
 /**
  * Parse WireGuard peer config file and extract Address as unique identifier
@@ -85,30 +85,6 @@ async function findConfFiles(dir: string): Promise<string[]> {
   return results;
 }
 
-/**
- * Encrypt configuration content using AES-256-GCM
- */
-function encryptConfig(plaintext: string, encryptionKey: string): string {
-  // Generate a random IV (initialization vector)
-  const iv = randomBytes(16);
-  
-  // Create cipher
-  const cipher = createCipheriv(
-    "aes-256-gcm",
-    Buffer.from(encryptionKey, "hex"),
-    iv
-  );
-  
-  // Encrypt
-  let encrypted = cipher.update(plaintext, "utf8", "hex");
-  encrypted += cipher.final("hex");
-  
-  // Get auth tag
-  const authTag = cipher.getAuthTag();
-  
-  // Combine IV + authTag + encrypted data (all in hex)
-  return `${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted}`;
-}
 
 /**
  * Import WireGuard configuration files from directory
