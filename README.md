@@ -84,6 +84,7 @@ The system reduces the time to distribute configurations from over 15 minutes pe
      - Supabase connection details (URL, anon key, service role key)
      - `IMPORT_DIR`: Path to directory containing WireGuard `.conf` files
      - `ENCRYPTION_KEY`: Generate using `openssl rand -hex 32`
+     - `ACCEPTED_DOMAINS`: Comma-separated list of email domains allowed for registration (e.g., `example.com,mycompany.com`)
    - See `env.example` for detailed descriptions of all variables
 
 5. **Start the development server**
@@ -181,6 +182,7 @@ The application can be deployed to a VPS using Docker and GitHub Actions for aut
    # Application Configuration
    IMPORT_DIR=/path/to/wireguard/configs
    ENCRYPTION_KEY=your_encryption_key_here
+   ACCEPTED_DOMAINS=example.com,yourcompany.com
    
    # Add other required variables from env.example
    ```

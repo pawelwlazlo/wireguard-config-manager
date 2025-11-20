@@ -188,6 +188,7 @@ describe('useDashboard', () => {
   it('should download a peer', async () => {
     vi.mocked(api.getUser).mockResolvedValue(mockUser);
     vi.mocked(api.getPeers).mockResolvedValue(mockPeersPage);
+    vi.mocked(api.downloadPeer).mockResolvedValue();
 
     const { result } = renderHook(() => useDashboard());
 
@@ -195,9 +196,23 @@ describe('useDashboard', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    result.current.downloadPeer(mockPeer.id);
+    await result.current.downloadPeer(mockPeer.id);
 
     expect(api.downloadPeer).toHaveBeenCalledWith(mockPeer.id);
+  });
+
+  it('should handle download error', async () => {
+    vi.mocked(api.getUser).mockResolvedValue(mockUser);
+    vi.mocked(api.getPeers).mockResolvedValue(mockPeersPage);
+    vi.mocked(api.downloadPeer).mockRejectedValue(new Error('Download failed'));
+
+    const { result } = renderHook(() => useDashboard());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    await expect(result.current.downloadPeer(mockPeer.id)).rejects.toThrow('Download failed');
   });
 
   it('should refresh data', async () => {

@@ -74,8 +74,15 @@ export function Dashboard() {
     }
   };
 
-  const handlePeerDownload = (id: string) => {
-    downloadPeer(id);
+  const handlePeerDownload = async (id: string) => {
+    try {
+      await downloadPeer(id);
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Failed to download configuration",
+        "error"
+      );
+    }
   };
 
   if (loading) {

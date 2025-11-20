@@ -15,7 +15,7 @@ interface DashboardState {
 
 interface DashboardActions {
   claimPeer: () => Promise<PeerDto | null>;
-  downloadPeer: (id: string) => void;
+  downloadPeer: (id: string) => Promise<void>;
   updatePeer: (id: string, data: UpdatePeerCommand) => Promise<PeerDto | null>;
   revokePeer: (id: string) => Promise<boolean>;
   refresh: () => Promise<void>;
@@ -70,8 +70,13 @@ export function useDashboard() {
     }
   }, []);
 
-  const downloadPeer = useCallback((id: string) => {
-    api.downloadPeer(id);
+  const downloadPeer = useCallback(async (id: string): Promise<void> => {
+    try {
+      await api.downloadPeer(id);
+    } catch (error) {
+      console.error("Failed to download peer:", error);
+      throw error;
+    }
   }, []);
 
   const updatePeer = useCallback(

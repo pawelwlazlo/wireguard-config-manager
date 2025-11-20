@@ -1,0 +1,22 @@
+# Cloudflare Tunnel Configuration
+# This file defines ingress rules for the tunnel
+
+tunnel: ${CLOUDFLARE_TUNNEL_ID}
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  # WireGuard Config Manager - main application
+  - hostname: demo.wireguard-config-manager.com
+    service: http://wireguard-config-manager:4321
+    originRequest:
+      noTLSVerify: true
+
+  # Supabase Studio - admin panel
+  - hostname: studio.wireguard-config-manager.com
+    service: http://supabase_studio_wireguard-config-manager:3000
+    originRequest:
+      noTLSVerify: true
+
+  # Catch-all rule (required)
+  - service: http_status:404
+

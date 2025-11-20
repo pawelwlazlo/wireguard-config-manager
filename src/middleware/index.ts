@@ -6,6 +6,10 @@
 import { defineMiddleware } from "astro:middleware";
 import { getSupabaseClient, getSupabaseAdminClient } from "@/db/supabase.client";
 import { getProfile } from "@/lib/services/userService";
+import { syncAcceptedDomains } from "@/lib/services/domainService";
+
+// Flag to track if domains have been synchronized (per app instance)
+let domainsSynced = false;
 
 export const onRequest = defineMiddleware(async (context, next) => {
   // Skip middleware during static prerendering (Astro.request may not be available)
@@ -23,6 +27,18 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return next();
   }
   context.locals.supabase = supabase;
+
+  // Synchronize accepted domains from environment to database (once per app instance)
+  if (!domainsSynced) {
+    try {
+      const adminClient = getSupabaseAdminClient();
+      await syncAcceptedDomains(adminClient);
+      domainsSynced = true;
+    } catch (error) {
+      console.error("Failed to sync accepted domains:", error);
+      // Continue anyway - this is not critical for app operation
+    }
+  }
 
   // Extract JWT token from cookie or Authorization header
   let token: string | undefined;

@@ -8,6 +8,7 @@ import { z } from "zod";
 import { getPeerConfig } from "@/lib/services/peerService";
 import { getSupabaseAdminClient } from "@/db/supabase.client";
 import { logAudit } from "@/lib/services/auditService";
+import { decryptConfig } from "@/lib/services/cryptoService";
 
 export const prerender = false;
 
@@ -45,16 +46,19 @@ export const GET: APIRoute = async ({ params, locals }) => {
     // Get peer config
     const peerConfig = await getPeerConfig(client, peerId);
 
-    // TODO: Decrypt config_ciphertext
-    // For now, we'll assume config_ciphertext is base64 encoded
-    // In production, this should be decrypted using a crypto service
+    // Get encryption key from environment
+    const encryptionKey = import.meta.env.ENCRYPTION_KEY;
+    if (!encryptionKey) {
+      throw new Error("ENCRYPTION_KEY not configured");
+    }
+
+    // Decrypt config_ciphertext
     let configContent: string;
     try {
-      // Decode base64
-      configContent = atob(peerConfig.config_ciphertext);
-    } catch {
-      // If not base64, use as-is (for testing)
-      configContent = peerConfig.config_ciphertext;
+      configContent = decryptConfig(peerConfig.config_ciphertext, encryptionKey);
+    } catch (error) {
+      console.error("Failed to decrypt config:", error);
+      throw new Error("DecryptionFailed");
     }
 
     // Generate filename
@@ -91,6 +95,16 @@ export const GET: APIRoute = async ({ params, locals }) => {
             message: "Peer not found",
           }),
           { status: 404, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      
+      if (error.message === "DecryptionFailed" || error.message === "ENCRYPTION_KEY not configured") {
+        return new Response(
+          JSON.stringify({
+            error: "DecryptionError",
+            message: "Failed to decrypt peer configuration",
+          }),
+          { status: 500, headers: { "Content-Type": "application/json" } }
         );
       }
     }
