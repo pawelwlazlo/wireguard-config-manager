@@ -4,6 +4,7 @@
  */
 
 import type { SupabaseClient } from "@/db/supabase.client";
+import { getEnv } from "@/lib/env";
 
 /**
  * Synchronizes accepted domains from ACCEPTED_DOMAINS environment variable to the database
@@ -14,8 +15,8 @@ import type { SupabaseClient } from "@/db/supabase.client";
  */
 export async function syncAcceptedDomains(supabase: SupabaseClient): Promise<void> {
   try {
-    // Read domains from environment variable
-    const domainsEnv = import.meta.env.ACCEPTED_DOMAINS;
+    // Read domains from environment variable (dev or production)
+    const domainsEnv = getEnv('ACCEPTED_DOMAINS');
     
     if (!domainsEnv) {
       console.info("ACCEPTED_DOMAINS not set, skipping domain sync");

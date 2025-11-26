@@ -9,6 +9,7 @@ import { getPeerConfig } from "@/lib/services/peerService";
 import { getSupabaseAdminClient } from "@/db/supabase.client";
 import { logAudit } from "@/lib/services/auditService";
 import { decryptConfig } from "@/lib/services/cryptoService";
+import { getRequiredEnv } from "@/lib/env";
 
 export const prerender = false;
 
@@ -46,11 +47,8 @@ export const GET: APIRoute = async ({ params, locals }) => {
     // Get peer config
     const peerConfig = await getPeerConfig(client, peerId);
 
-    // Get encryption key from environment
-    const encryptionKey = import.meta.env.ENCRYPTION_KEY;
-    if (!encryptionKey) {
-      throw new Error("ENCRYPTION_KEY not configured");
-    }
+    // Get encryption key from environment (dev or production)
+    const encryptionKey = getRequiredEnv('ENCRYPTION_KEY');
 
     // Decrypt config_ciphertext
     let configContent: string;
