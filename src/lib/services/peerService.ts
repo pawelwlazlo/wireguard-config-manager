@@ -26,7 +26,7 @@ function mapToPeerDto(row: Pick<PeerRow, "id" | "public_key" | "status" | "frien
 
 /**
  * Get single peer by ID
- * Returns null if not found or no access (RLS)
+ * Returns null if not found, no access (RLS), or invalid peer
  */
 export async function getPeerById(
   supabase: SupabaseClient,
@@ -37,6 +37,7 @@ export async function getPeerById(
     .from("peers")
     .select("id, public_key, status, friendly_name, claimed_at, revoked_at")
     .eq("id", peerId)
+    .not("public_key", "like", "%$%") // Only valid peers
     .single();
 
   if (error || !data) {
@@ -76,6 +77,7 @@ export async function getPeersForOwner(
       { count: "exact" }
     )
     .eq("owner_id", ownerId)
+    .not("public_key", "like", "%$%") // Exclude invalid peers at SQL level
     .order("claimed_at", { ascending: false });
 
   if (options.status) {
@@ -100,6 +102,7 @@ export async function getPeersForOwner(
 
 /**
  * Get count of active peers for user
+ * Only counts valid peers (without template variables)
  */
 export async function getActivePeerCount(
   supabase: SupabaseClient,
@@ -110,7 +113,8 @@ export async function getActivePeerCount(
     .from("peers")
     .select("id", { count: "exact", head: true })
     .eq("owner_id", ownerId)
-    .eq("status", "active");
+    .eq("status", "active")
+    .not("public_key", "like", "%$%"); // Exclude invalid peers at SQL level
 
   if (error) {
     throw new Error(`Failed to count active peers: ${error.message}`);
@@ -152,6 +156,7 @@ export async function claimNextPeer(
     .select("id")
     .eq("status", "available")
     .is("owner_id", null)
+    .not("public_key", "like", "%$%") // Exclude invalid peers at SQL level
     .order("imported_at", { ascending: true })
     .limit(1)
     .single();
@@ -329,6 +334,7 @@ export async function assignPeerToUser(
     .from("peers")
     .select("id, status")
     .eq("id", peerId)
+    .not("public_key", "like", "%$%") // Only valid peers
     .single();
 
   if (peerError || !peerData) {
@@ -411,6 +417,7 @@ export async function getPeersAdmin(
       "id, public_key, status, friendly_name, claimed_at, revoked_at, owner_id, users!peers_owner_id_fkey(email)",
       { count: "exact" }
     )
+    .not("public_key", "like", "%$%") // Exclude invalid peers at SQL level
     .order("imported_at", { ascending: false });
 
   // Apply filters
