@@ -7,7 +7,7 @@ services:
       - "4321"
     volumes:
       - ./.env:/app/.env:ro
-      - ./home/ubuntu/wireguard/config:/app/config
+      - /home/ubuntu/wireguard/config:/app/config
     restart: unless-stopped
     env_file:
       - ./.env
