@@ -6,16 +6,19 @@ import { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { Navigation } from "@/components/Navigation";
+import { Button } from "@/components/ui/button";
 import { PeerFilters } from "./admin/PeerFilters";
 import { PeerList } from "./admin/PeerList";
 import { PeerPagination } from "./admin/PeerPagination";
 import { AssignmentModal } from "./admin/AssignmentModal";
 import { ConfirmDialog } from "./admin/ConfirmDialog";
+import { ImportResultDialog } from "./admin/ImportResultDialog";
 import { useAdminPeers } from "./hooks/useAdminPeers";
 import { useAssignPeer } from "./hooks/useAssignPeer";
 import { useRevokePeer } from "./hooks/useRevokePeer";
+import { useImportPeers } from "./hooks/useImportPeers";
 import { api } from "@/lib/api";
-import type { PeerRowVM, PeerFiltersState, UserDto } from "@/types";
+import type { PeerRowVM, PeerFiltersState, UserDto, ImportResultDto } from "@/types";
 
 export function AdminPeers() {
   const {
@@ -34,11 +37,14 @@ export function AdminPeers() {
 
   const assignPeer = useAssignPeer();
   const revokePeer = useRevokePeer();
+  const importPeers = useImportPeers();
 
   const [user, setUser] = useState<UserDto | null>(null);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [importResultDialogOpen, setImportResultDialogOpen] = useState(false);
   const [selectedPeer, setSelectedPeer] = useState<PeerRowVM | null>(null);
+  const [importResult, setImportResult] = useState<ImportResultDto | null>(null);
 
   useEffect(() => {
     // Fetch user data for navigation
@@ -93,16 +99,67 @@ export function AdminPeers() {
     }
   };
 
+  const handleImportClick = async () => {
+    try {
+      const result = await importPeers.mutate();
+      if (result) {
+        setImportResult(result);
+        setImportResultDialogOpen(true);
+        toast.success(`Successfully imported ${result.files_imported} peer(s)`);
+        await reload();
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to import peers";
+      toast.error(message);
+    }
+  };
+
   return (
     <>
       <Toaster />
       <Navigation user={user} />
       <div className="container mx-auto space-y-6 py-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Peers Management</h1>
-          <p className="text-muted-foreground">
-            Manage WireGuard peer configurations and assignments
-          </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Peers Management</h1>
+            <p className="text-muted-foreground">
+              Manage WireGuard peer configurations and assignments
+            </p>
+          </div>
+          <Button
+            onClick={handleImportClick}
+            disabled={importPeers.loading}
+            className="shrink-0"
+          >
+            {importPeers.loading ? (
+              <>
+                <svg
+                  className="mr-2 h-4 w-4 animate-spin"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+                Importing...
+              </>
+            ) : (
+              "Import Peers"
+            )}
+          </Button>
         </div>
 
         {error && (
@@ -148,6 +205,12 @@ export function AdminPeers() {
           onClose={() => setConfirmDialogOpen(false)}
           onConfirm={handleRevokeConfirm}
           loading={revokePeer.loading}
+        />
+
+        <ImportResultDialog
+          result={importResult}
+          open={importResultDialogOpen}
+          onClose={() => setImportResultDialogOpen(false)}
         />
       </div>
     </>
