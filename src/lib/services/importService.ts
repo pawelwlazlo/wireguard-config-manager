@@ -65,16 +65,20 @@ async function findConfFiles(dir: string): Promise<string[]> {
   const results: string[] = [];
   
   try {
+    console.log(`Scanning directory: ${dir}`);
     const entries = await readdir(dir, { withFileTypes: true });
+    console.log(`Found ${entries.length} entries in ${dir}`);
     
     for (const entry of entries) {
       const fullPath = join(dir, entry.name);
       
       if (entry.isDirectory()) {
+        console.log(`Entering subdirectory: ${fullPath}`);
         // Recursively search subdirectories
         const subResults = await findConfFiles(fullPath);
         results.push(...subResults);
       } else if (entry.isFile() && extname(entry.name) === ".conf") {
+        console.log(`Found .conf file: ${fullPath}`);
         results.push(fullPath);
       }
     }
@@ -82,6 +86,7 @@ async function findConfFiles(dir: string): Promise<string[]> {
     console.error(`Error scanning directory ${dir}:`, error);
   }
   
+  console.log(`Total .conf files found in ${dir}: ${results.length}`);
   return results;
 }
 
