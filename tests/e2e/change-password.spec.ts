@@ -5,20 +5,32 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Change Password Page', () => {
-  test.beforeEach(async ({ page }) => {
-    // Set up authentication in localStorage
-    await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.setItem('jwt', 'mock-jwt-token');
-      localStorage.setItem('user', JSON.stringify({
-        id: 'user-123',
-        email: 'user@example.com',
-        roles: ['user'],
-        status: 'active',
-        peer_limit: 5,
-        requires_password_change: false,
-        created_at: new Date().toISOString()
-      }));
+  test.beforeEach(async ({ page, context }) => {
+    // Set JWT cookie for SSR authentication (middleware needs this)
+    await context.addCookies([{
+      name: 'jwt',
+      value: 'test-mock-jwt-user',
+      domain: 'localhost',
+      path: '/',
+      httpOnly: true,
+      sameSite: 'Lax' as const,
+    }]);
+
+    // Mock authentication API endpoint (for client-side calls)
+    await page.route('**/api/v1/users/me', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'user-123',
+          email: 'user@example.com',
+          roles: ['user'],
+          status: 'active',
+          peer_limit: 5,
+          requires_password_change: false,
+          created_at: new Date().toISOString()
+        }),
+      });
     });
     
     await page.goto('/change-password');

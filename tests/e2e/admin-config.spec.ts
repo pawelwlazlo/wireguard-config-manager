@@ -27,8 +27,18 @@ const mockConfig: ConfigDto = {
 };
 
 test.describe('Admin Config - Authenticated Admin', () => {
-  test.beforeEach(async ({ page }) => {
-    // Mock authentication
+  test.beforeEach(async ({ page, context }) => {
+    // Set JWT cookie for SSR authentication (middleware needs this)
+    await context.addCookies([{
+      name: 'jwt',
+      value: 'test-mock-jwt-admin',
+      domain: 'localhost',
+      path: '/',
+      httpOnly: true,
+      sameSite: 'Lax' as const,
+    }]);
+
+    // Mock authentication API endpoint (for client-side calls)
     await page.route('**/api/v1/users/me', async (route) => {
       await route.fulfill({
         status: 200,
@@ -290,7 +300,17 @@ test.describe('Admin Config - Authenticated Admin', () => {
 });
 
 test.describe('Admin Config - Non-Admin User', () => {
-  test('should return 403 for non-admin users', async ({ page }) => {
+  test('should return 403 for non-admin users', async ({ page, context }) => {
+    // Set JWT cookie for regular user (not admin)
+    await context.addCookies([{
+      name: 'jwt',
+      value: 'test-mock-jwt-user',
+      domain: 'localhost',
+      path: '/',
+      httpOnly: true,
+      sameSite: 'Lax' as const,
+    }]);
+
     const regularUser: UserDto = {
       ...mockAdminUser,
       roles: ['user'],
@@ -315,11 +335,9 @@ test.describe('Admin Config - Non-Admin User', () => {
       });
     });
 
-    // Server-side should redirect to home, but if API is called:
+    // Server-side should redirect to home (non-admin users can't access admin pages)
     await page.goto('/admin/config');
-
-    // Should see error or be redirected
-    // This depends on server-side middleware behavior
+    await page.waitForURL('/'); // Should redirect to home
   });
 });
 

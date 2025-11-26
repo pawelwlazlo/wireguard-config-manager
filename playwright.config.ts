@@ -68,6 +68,9 @@ export default defineConfig({
     url: 'http://localhost:4321',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
+    env: {
+      TEST_MOCK_AUTH: 'true', // Enable mock authentication for E2E tests
+    },
   },
 });
 

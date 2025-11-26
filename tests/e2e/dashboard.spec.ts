@@ -33,8 +33,18 @@ const mockPeersPage: PeerPage<PeerDto> = {
 };
 
 test.describe('Dashboard - Authenticated User', () => {
-  test.beforeEach(async ({ page }) => {
-    // Mock authentication
+  test.beforeEach(async ({ page, context }) => {
+    // Set JWT cookie for SSR authentication (middleware needs this)
+    await context.addCookies([{
+      name: 'jwt',
+      value: 'test-mock-jwt-user',
+      domain: 'localhost',
+      path: '/',
+      httpOnly: true,
+      sameSite: 'Lax' as const,
+    }]);
+
+    // Mock authentication API endpoint (for client-side calls)
     await page.route('**/api/v1/users/me', async (route) => {
       await route.fulfill({
         status: 200,

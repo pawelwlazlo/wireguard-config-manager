@@ -7,6 +7,7 @@ import { defineMiddleware } from "astro:middleware";
 import { getSupabaseClient, getSupabaseAdminClient } from "@/db/supabase.client";
 import { getProfile } from "@/lib/services/userService";
 import { syncAcceptedDomains } from "@/lib/services/domainService";
+import { getEnv } from "@/lib/env";
 
 // Flag to track if domains have been synchronized (per app instance)
 let domainsSynced = false;
@@ -59,6 +60,36 @@ export const onRequest = defineMiddleware(async (context, next) => {
   
   if (token) {
     try {
+      // TEST MODE: Accept mock token only when TEST_MOCK_AUTH is enabled OR in development mode
+      // This allows E2E tests to bypass Supabase authentication
+      // NEVER enable this in production - it's only for testing
+      const testMockAuth = getEnv("TEST_MOCK_AUTH");
+      const isDevMode = typeof import.meta !== 'undefined' && import.meta.env?.DEV === true;
+      const isTestMode = testMockAuth === "true" || isDevMode;
+      const isMockToken = token.startsWith("test-mock-jwt-");
+
+      if (isTestMode && isMockToken) {
+        // Extract user type from mock token (format: test-mock-jwt-{userType})
+        // Examples: test-mock-jwt-admin, test-mock-jwt-user
+        const tokenParts = token.split("-");
+        const userType = tokenParts[tokenParts.length - 1] || "user";
+
+        // Create mock user profile based on token type
+        const mockUser = {
+          id: `${userType}-123`,
+          email: `${userType}@example.com`,
+          roles: userType === "admin" ? ["admin"] : ["user"],
+          status: "active" as const,
+          peer_limit: userType === "admin" ? 10 : 5,
+          created_at: "2024-01-01T00:00:00Z",
+          requires_password_change: false,
+        };
+
+        context.locals.user = mockUser;
+        return next();
+      }
+
+      // PRODUCTION MODE: Normal Supabase authentication
       // Verify JWT token with Supabase Auth
       const { data, error } = await supabase.auth.getUser(token);
 
