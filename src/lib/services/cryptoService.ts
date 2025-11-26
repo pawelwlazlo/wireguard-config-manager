@@ -5,17 +5,59 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 
 /**
+ * Normalize and validate encryption key format and length
+ * AES-256 requires exactly 32 bytes (64 hex characters)
+ * Handles whitespace trimming and validates hex format
+ */
+function normalizeAndValidateEncryptionKey(key: string): string {
+  if (!key || typeof key !== 'string') {
+    throw new Error(`Invalid encryption key: key must be a non-empty string`);
+  }
+  
+  // Trim whitespace (common issue with env vars)
+  const trimmedKey = key.trim();
+  
+  if (!trimmedKey) {
+    throw new Error(`Invalid encryption key: key is empty after trimming whitespace`);
+  }
+  
+  // Check if key is valid hex
+  if (!/^[0-9a-fA-F]+$/.test(trimmedKey)) {
+    throw new Error(
+      `Invalid encryption key: key must be in hexadecimal format (0-9, a-f, A-F). ` +
+      `Got ${trimmedKey.length} characters. ` +
+      `Key starts with: ${trimmedKey.substring(0, 10)}...`
+    );
+  }
+  
+  // AES-256 requires exactly 32 bytes = 64 hex characters
+  const keyBuffer = Buffer.from(trimmedKey, "hex");
+  if (keyBuffer.length !== 32) {
+    throw new Error(
+      `Invalid encryption key length: expected 64 hex characters (32 bytes) for AES-256, ` +
+      `got ${trimmedKey.length} characters (${keyBuffer.length} bytes). ` +
+      `Generate a new key using: openssl rand -hex 32`
+    );
+  }
+  
+  return trimmedKey;
+}
+
+/**
  * Encrypt configuration content using AES-256-GCM
  * Returns hex-encoded string in format: iv:authTag:encrypted
  */
 export function encryptConfig(plaintext: string, encryptionKey: string): string {
+  // Normalize and validate key before use
+  const normalizedKey = normalizeAndValidateEncryptionKey(encryptionKey);
+  
   // Generate a random IV (initialization vector)
   const iv = randomBytes(16);
   
   // Create cipher
   const cipher = createCipheriv(
     "aes-256-gcm",
-    Buffer.from(encryptionKey, "hex"),
+    Buffer.from(normalizedKey, "hex"),
     iv
   );
  
@@ -72,10 +114,13 @@ export function decryptConfig(ciphertext: string, encryptionKey: string): string
     throw new Error(`Invalid auth tag length: expected 16 bytes, got ${authTag.length}`);
   }
 
+  // Normalize and validate key before use
+  const normalizedKey = normalizeAndValidateEncryptionKey(encryptionKey);
+
   // Create decipher
   const decipher = createDecipheriv(
     "aes-256-gcm",
-    Buffer.from(encryptionKey, "hex"),
+    Buffer.from(normalizedKey, "hex"),
     iv
   );
 
