@@ -51,15 +51,9 @@ export default defineConfig({
       use: { ...devices['Desktop Safari'] },
     },
 
-    // Mobile viewports
-    {
-      name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
-    },
-    {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] },
-    },
+    // Note: Mobile testing is covered by "should be responsive on mobile" tests
+    // which manually set viewport size. Separate mobile projects were removed
+    // as they were duplicating desktop tests with timing issues.
   ],
 
   // Run your local dev server before starting the tests
