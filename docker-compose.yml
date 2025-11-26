@@ -7,6 +7,7 @@ services:
       - "4321"
     volumes:
       - ./.env:/app/.env:ro
+      - ./home/ubuntu/wireguard/config:/app/config
     restart: unless-stopped
     env_file:
       - ./.env
@@ -20,6 +21,8 @@ services:
     container_name: cloudflared-wireguard
     restart: unless-stopped
     command: tunnel --no-autoupdate run
+    env_file:
+      - ./.env
     environment:
       - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
     depends_on:
@@ -29,4 +32,3 @@ networks:
   default:
     name: supabase_network_wireguard-config-manager
     external: true
-
