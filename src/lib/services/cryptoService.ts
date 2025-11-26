@@ -5,70 +5,17 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 
 /**
- * Normalize and validate encryption key format and length
- * Supports both hex (64 chars) and base64 (44 chars) formats
- * AES-256 requires exactly 32 bytes
- * Handles whitespace trimming and auto-detects format
+ * Normalize encryption key - supports both hex and base64
  */
-function normalizeAndValidateEncryptionKey(key: string): Buffer {
-  if (!key || typeof key !== 'string') {
-    throw new Error(`Invalid encryption key: key must be a non-empty string`);
-  }
-  
-  // Trim whitespace (common issue with env vars)
+function normalizeEncryptionKey(key: string): Buffer {
   const trimmedKey = key.trim();
   
-  if (!trimmedKey) {
-    throw new Error(`Invalid encryption key: key is empty after trimming whitespace`);
-  }
-  
-  let keyBuffer: Buffer;
-  let detectedFormat: string;
-  
-  // Detect format: base64 typically ends with = or contains + or /
-  // Hex only contains 0-9, a-f, A-F
+  // If key contains base64 characters, use base64, otherwise hex
   if (trimmedKey.includes('=') || trimmedKey.includes('+') || trimmedKey.includes('/')) {
-    // Try base64
-    try {
-      keyBuffer = Buffer.from(trimmedKey, 'base64');
-      detectedFormat = 'base64';
-    } catch {
-      throw new Error(
-        `Invalid encryption key: appears to be base64 but failed to decode. ` +
-        `Key length: ${trimmedKey.length} characters. ` +
-        `Key starts with: ${trimmedKey.substring(0, 10)}...`
-      );
-    }
-  } else if (/^[0-9a-fA-F]+$/.test(trimmedKey)) {
-    // Try hex
-    try {
-      keyBuffer = Buffer.from(trimmedKey, 'hex');
-      detectedFormat = 'hex';
-    } catch {
-      throw new Error(
-        `Invalid encryption key: appears to be hex but failed to decode. ` +
-        `Key length: ${trimmedKey.length} characters.`
-      );
-    }
-  } else {
-    throw new Error(
-      `Invalid encryption key format: key must be either hexadecimal (64 chars) or base64 (44 chars). ` +
-      `Got ${trimmedKey.length} characters. ` +
-      `Key starts with: ${trimmedKey.substring(0, 10)}...`
-    );
+    return Buffer.from(trimmedKey, 'base64');
   }
   
-  // AES-256 requires exactly 32 bytes
-  if (keyBuffer.length !== 32) {
-    throw new Error(
-      `Invalid encryption key length: expected 32 bytes for AES-256, ` +
-      `got ${keyBuffer.length} bytes from ${detectedFormat} format (${trimmedKey.length} characters). ` +
-      `For hex: use 64 characters. For base64: use 44 characters. ` +
-      `Generate using: openssl rand -hex 32 (hex) or openssl rand -base64 32 (base64)`
-    );
-  }
-  
-  return keyBuffer;
+  return Buffer.from(trimmedKey, 'hex');
 }
 
 /**
@@ -76,8 +23,7 @@ function normalizeAndValidateEncryptionKey(key: string): Buffer {
  * Returns hex-encoded string in format: iv:authTag:encrypted
  */
 export function encryptConfig(plaintext: string, encryptionKey: string): string {
-  // Normalize and validate key before use (returns Buffer)
-  const keyBuffer = normalizeAndValidateEncryptionKey(encryptionKey);
+  const keyBuffer = normalizeEncryptionKey(encryptionKey);
   
   // Generate a random IV (initialization vector)
   const iv = randomBytes(16);
@@ -142,8 +88,7 @@ export function decryptConfig(ciphertext: string, encryptionKey: string): string
     throw new Error(`Invalid auth tag length: expected 16 bytes, got ${authTag.length}`);
   }
 
-  // Normalize and validate key before use (returns Buffer)
-  const keyBuffer = normalizeAndValidateEncryptionKey(encryptionKey);
+  const keyBuffer = normalizeEncryptionKey(encryptionKey);
 
   // Create decipher
   const decipher = createDecipheriv(
