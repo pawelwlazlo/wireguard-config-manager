@@ -18,7 +18,7 @@ export function encryptConfig(plaintext: string, encryptionKey: string): string 
     Buffer.from(encryptionKey, "hex"),
     iv
   );
-  
+ 
   // Encrypt
   let encrypted = cipher.update(plaintext, "utf8", "hex");
   encrypted += cipher.final("hex");
