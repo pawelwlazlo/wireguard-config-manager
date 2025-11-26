@@ -105,7 +105,14 @@ export function AdminPeers() {
       if (result) {
         setImportResult(result);
         setImportResultDialogOpen(true);
-        toast.success(`Successfully imported ${result.files_imported} peer(s)`);
+        
+        // Build toast message based on results
+        let message = `Successfully imported ${result.files_imported} peer(s)`;
+        if (result.skipped > 0) {
+          message += ` (${result.skipped} skipped)`;
+        }
+        toast.success(message);
+        
         await reload();
       }
     } catch (error) {

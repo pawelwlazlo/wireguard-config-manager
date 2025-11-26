@@ -109,6 +109,7 @@ export async function importConfigs(
     return {
       files_imported: 0,
       batch_id: "",
+      skipped: 0,
     };
   }
 
@@ -130,6 +131,7 @@ export async function importConfigs(
 
   const batchId = batchData.id;
   let successCount = 0;
+  let skippedCount = 0;
 
   // Process each config file
   for (const filePath of confFiles) {
@@ -162,8 +164,15 @@ export async function importConfigs(
         });
 
       if (insertError) {
-        // Log error but continue with other files
-        console.error(`Failed to import ${filePath}:`, insertError);
+        // Check if it's a duplicate key error (PostgreSQL error code 23505)
+        if (insertError.code === '23505') {
+          // Silently skip duplicates - peer already imported
+          console.debug(`Skipping duplicate peer from ${filePath}: ${peerAddress}`);
+          skippedCount++;
+        } else {
+          // Log other errors
+          console.error(`Failed to import ${filePath}:`, insertError);
+        }
         continue;
       }
 
@@ -200,6 +209,7 @@ export async function importConfigs(
       metadata: {
         batch_id: batchId,
         files_imported: successCount,
+        files_skipped: skippedCount,
         total_files: confFiles.length,
       },
     });
@@ -211,6 +221,7 @@ export async function importConfigs(
   return {
     files_imported: successCount,
     batch_id: batchId,
+    skipped: skippedCount,
   };
 }
 

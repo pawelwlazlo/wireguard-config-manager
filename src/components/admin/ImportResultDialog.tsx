@@ -45,6 +45,12 @@ export function ImportResultDialog({
                 </span>
               </div>
               <div className="flex justify-between">
+                <span className="font-semibold">Skipped (Duplicates):</span>
+                <span className="text-lg font-bold text-yellow-600">
+                  {result.skipped}
+                </span>
+              </div>
+              <div className="flex justify-between">
                 <span className="font-semibold">Batch ID:</span>
                 <span className="font-mono text-sm text-muted-foreground">
                   {result.batch_id}
@@ -56,12 +62,21 @@ export function ImportResultDialog({
             <p className="text-sm text-muted-foreground">
               The new peer configurations are now available and can be assigned
               to users.
+              {result.skipped > 0 && (
+                <span className="block mt-1 text-yellow-700">
+                  {result.skipped} duplicate file(s) were skipped.
+                </span>
+              )}
             </p>
           )}
-          {result.files_imported === 0 && (
+          {result.files_imported === 0 && result.skipped === 0 && (
             <p className="text-sm text-yellow-600">
-              No new configurations were found to import. The import directory
-              may be empty or all files have already been imported.
+              No configurations were found in the import directory.
+            </p>
+          )}
+          {result.files_imported === 0 && result.skipped > 0 && (
+            <p className="text-sm text-yellow-600">
+              All {result.skipped} configuration file(s) have already been imported previously.
             </p>
           )}
         </div>
