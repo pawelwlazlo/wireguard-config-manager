@@ -88,13 +88,14 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
           IMPORT_DIR: ${{ secrets.IMPORT_DIR }}
+          CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          envs: SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,ENCRYPTION_KEY,IMPORT_DIR,GITHUB_TOKEN,GITHUB_ACTOR
+          envs: SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,ENCRYPTION_KEY,IMPORT_DIR,CLOUDFLARE_TUNNEL_TOKEN,GITHUB_TOKEN,GITHUB_ACTOR
           script: |
             set -e
             
@@ -116,6 +117,7 @@ jobs:
             SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY
             ENCRYPTION_KEY=$ENCRYPTION_KEY
             IMPORT_DIR=$IMPORT_DIR
+            CLOUDFLARE_TUNNEL_TOKEN=$CLOUDFLARE_TUNNEL_TOKEN
             NODE_ENV=production
             HOST=0.0.0.0
             PORT=4321
@@ -127,6 +129,7 @@ jobs:
             sed -i "s|\$SUPABASE_SERVICE_ROLE_KEY|$SUPABASE_SERVICE_ROLE_KEY|g" .env
             sed -i "s|\$ENCRYPTION_KEY|$ENCRYPTION_KEY|g" .env
             sed -i "s|\$IMPORT_DIR|$IMPORT_DIR|g" .env
+            sed -i "s|\$CLOUDFLARE_TUNNEL_TOKEN|$CLOUDFLARE_TUNNEL_TOKEN|g" .env
             
             echo "✓ Created .env file"
             

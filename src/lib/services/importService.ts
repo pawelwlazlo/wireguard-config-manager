@@ -7,7 +7,7 @@ import type { SupabaseClient } from "@/db/supabase.client";
 import type { ImportResultDto } from "@/types";
 import { readdir, readFile } from "node:fs/promises";
 import { join, extname } from "node:path";
-import { createCipheriv, randomBytes } from "node:crypto";
+import { encryptConfig } from "./cryptoService";
 
 /**
  * Parse WireGuard peer config file and extract Address as unique identifier
@@ -65,16 +65,20 @@ async function findConfFiles(dir: string): Promise<string[]> {
   const results: string[] = [];
   
   try {
+    console.log(`Scanning directory: ${dir}`);
     const entries = await readdir(dir, { withFileTypes: true });
+    console.log(`Found ${entries.length} entries in ${dir}`);
     
     for (const entry of entries) {
       const fullPath = join(dir, entry.name);
       
       if (entry.isDirectory()) {
+        console.log(`Entering subdirectory: ${fullPath}`);
         // Recursively search subdirectories
         const subResults = await findConfFiles(fullPath);
         results.push(...subResults);
       } else if (entry.isFile() && extname(entry.name) === ".conf") {
+        console.log(`Found .conf file: ${fullPath}`);
         results.push(fullPath);
       }
     }
@@ -82,33 +86,10 @@ async function findConfFiles(dir: string): Promise<string[]> {
     console.error(`Error scanning directory ${dir}:`, error);
   }
   
+  console.log(`Total .conf files found in ${dir}: ${results.length}`);
   return results;
 }
 
-/**
- * Encrypt configuration content using AES-256-GCM
- */
-function encryptConfig(plaintext: string, encryptionKey: string): string {
-  // Generate a random IV (initialization vector)
-  const iv = randomBytes(16);
-  
-  // Create cipher
-  const cipher = createCipheriv(
-    "aes-256-gcm",
-    Buffer.from(encryptionKey, "hex"),
-    iv
-  );
-  
-  // Encrypt
-  let encrypted = cipher.update(plaintext, "utf8", "hex");
-  encrypted += cipher.final("hex");
-  
-  // Get auth tag
-  const authTag = cipher.getAuthTag();
-  
-  // Combine IV + authTag + encrypted data (all in hex)
-  return `${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted}`;
-}
 
 /**
  * Import WireGuard configuration files from directory
@@ -133,6 +114,7 @@ export async function importConfigs(
     return {
       files_imported: 0,
       batch_id: "",
+      skipped: 0,
     };
   }
 
@@ -154,6 +136,7 @@ export async function importConfigs(
 
   const batchId = batchData.id;
   let successCount = 0;
+  let skippedCount = 0;
 
   // Process each config file
   for (const filePath of confFiles) {
@@ -186,8 +169,15 @@ export async function importConfigs(
         });
 
       if (insertError) {
-        // Log error but continue with other files
-        console.error(`Failed to import ${filePath}:`, insertError);
+        // Check if it's a duplicate key error (PostgreSQL error code 23505)
+        if (insertError.code === '23505') {
+          // Silently skip duplicates - peer already imported
+          console.debug(`Skipping duplicate peer from ${filePath}: ${peerAddress}`);
+          skippedCount++;
+        } else {
+          // Log other errors
+          console.error(`Failed to import ${filePath}:`, insertError);
+        }
         continue;
       }
 
@@ -224,6 +214,7 @@ export async function importConfigs(
       metadata: {
         batch_id: batchId,
         files_imported: successCount,
+        files_skipped: skippedCount,
         total_files: confFiles.length,
       },
     });
@@ -235,6 +226,7 @@ export async function importConfigs(
   return {
     files_imported: successCount,
     batch_id: batchId,
+    skipped: skippedCount,
   };
 }
 

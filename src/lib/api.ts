@@ -14,7 +14,8 @@ import type {
   ResetPasswordResponse,
   AuditDto,
   AuditEvent,
-  ConfigDto
+  ConfigDto,
+  ImportResultDto
 } from "@/types";
 
 interface ApiError {
@@ -101,8 +102,48 @@ class ApiClient {
     });
   }
 
-  downloadPeer(id: string): void {
-    window.location.href = `${this.baseUrl}/peers/${id}/download`;
+  async downloadPeer(id: string): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/peers/${id}/download`, {
+        method: "GET",
+        credentials: "same-origin",
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          window.location.href = "/login?expired=true";
+          return;
+        }
+        throw new Error("Failed to download peer configuration");
+      }
+
+      // Get the filename from Content-Disposition header
+      const contentDisposition = response.headers.get("Content-Disposition");
+      let filename = `peer-${id.substring(0, 8)}.conf`;
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Get the blob and create download link
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Cleanup
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Error downloading peer config:", error);
+      throw error;
+    }
   }
 
   // Admin endpoints
@@ -205,6 +246,13 @@ class ApiClient {
   // Admin config endpoint
   async getConfig(): Promise<ConfigDto> {
     return this.fetchWithRetry<ConfigDto>(`${this.baseUrl}/admin/config`);
+  }
+
+  // Admin import endpoint
+  async importPeers(): Promise<ImportResultDto> {
+    return this.fetchWithRetry<ImportResultDto>(`${this.baseUrl}/admin/import`, {
+      method: "POST",
+    });
   }
 }
 

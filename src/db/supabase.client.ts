@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import type { SupabaseClient as SupabaseClientType } from '@supabase/supabase-js';
 
 import type { Database } from '../db/database.types.ts';
+import { getRequiredEnv } from '@/lib/env';
 
 // Export type for use in service functions
 export type SupabaseClient = SupabaseClientType<Database>;
@@ -13,15 +14,12 @@ let _supabaseAdminClient: SupabaseClient | null = null;
 /**
  * Get or create the public Supabase client (anon key)
  * Uses lazy initialization to avoid issues with import.meta.env in middleware
+ * Works both in development (import.meta.env) and production (process.env)
  */
 export function getSupabaseClient(): SupabaseClient {
   if (!_supabaseClient) {
-    const supabaseUrl = import.meta.env.SUPABASE_URL;
-    const supabaseAnonKey = import.meta.env.SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error('Missing SUPABASE_URL or SUPABASE_ANON_KEY environment variables');
-    }
+    const supabaseUrl = getRequiredEnv('SUPABASE_URL');
+    const supabaseAnonKey = getRequiredEnv('SUPABASE_ANON_KEY');
 
     _supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey);
   }
@@ -31,15 +29,12 @@ export function getSupabaseClient(): SupabaseClient {
 /**
  * Get or create the admin Supabase client (service_role key)
  * Bypasses RLS - use with caution!
+ * Works both in development (import.meta.env) and production (process.env)
  */
 export function getSupabaseAdminClient(): SupabaseClient {
   if (!_supabaseAdminClient) {
-    const supabaseUrl = import.meta.env.SUPABASE_URL;
-    const supabaseServiceRoleKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !supabaseServiceRoleKey) {
-      throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables');
-    }
+    const supabaseUrl = getRequiredEnv('SUPABASE_URL');
+    const supabaseServiceRoleKey = getRequiredEnv('SUPABASE_SERVICE_ROLE_KEY');
 
     _supabaseAdminClient = createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
       auth: {

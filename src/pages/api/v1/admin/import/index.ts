@@ -6,6 +6,7 @@
 import type { APIRoute } from "astro";
 import { importConfigs } from "@/lib/services/importService";
 import { getSupabaseAdminClient } from "@/db/supabase.client";
+import { getRequiredEnv } from "@/lib/env";
 
 export const prerender = false;
 
@@ -27,25 +28,19 @@ export const POST: APIRoute = async ({ locals }) => {
       );
     }
 
-    // Get configuration from environment
-    const importDir = import.meta.env.IMPORT_DIR;
-    const encryptionKey = import.meta.env.ENCRYPTION_KEY;
-
-    if (!importDir) {
+    // Get configuration from environment (dev or production)
+    let importDir: string;
+    let encryptionKey: string;
+    
+    try {
+      importDir = getRequiredEnv('IMPORT_DIR');
+      encryptionKey = getRequiredEnv('ENCRYPTION_KEY');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Configuration error";
       return new Response(
         JSON.stringify({
           error: "ConfigError",
-          message: "IMPORT_DIR not configured",
-        }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!encryptionKey) {
-      return new Response(
-        JSON.stringify({
-          error: "ConfigError",
-          message: "ENCRYPTION_KEY not configured",
+          message,
         }),
         { status: 500, headers: { "Content-Type": "application/json" } }
       );

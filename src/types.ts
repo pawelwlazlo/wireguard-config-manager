@@ -69,6 +69,7 @@ export interface ConfigDto {
 export interface ImportResultDto {
   files_imported: number;
   batch_id: string;
+  skipped: number;
 }
 
 /* -------------------------------------------------------------------------- */
